@@ -6,7 +6,6 @@ AC_DEFUN([TORRENT_CHECK_OPENSSL],
 
     AC_DEFINE(USE_OPENSSL, 1, Using OpenSSL.)
     AC_DEFINE(USE_OPENSSL_SHA, 1, Using OpenSSL's SHA1 implementation.)
-    AC_CHECK_LIB([crypto], [DH_set0_pqg], [AC_DEFINE(USE_OPENSSL_1_1, 1, Using OpenSSL 1.1.)])
   ]
 )
 
