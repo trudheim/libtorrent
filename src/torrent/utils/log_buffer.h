@@ -1,13 +1,11 @@
-#ifndef LIBTORRENT_UTILS_LOG_BUFFER_H
-#define LIBTORRENT_UTILS_LOG_BUFFER_H
+#ifndef LIBTORRENT_TORRENT_UTILS_LOG_BUFFER_H
+#define LIBTORRENT_TORRENT_UTILS_LOG_BUFFER_H
 
 #include <string>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <pthread.h>
-
-#include <torrent/common.h>
 
 namespace torrent {
 
@@ -23,9 +21,9 @@ struct log_entry {
   std::string message;
 };
 
-class LIBTORRENT_EXPORT log_buffer : private std::deque<log_entry> {
+class [[gnu::visibility("default")]] log_buffer : private std::deque<log_entry> {
 public:
-  typedef std::deque<log_entry>       base_type;
+  typedef std::deque<log_entry>  base_type;
   typedef std::function<void ()> slot_void;
 
   using base_type::iterator;
@@ -63,9 +61,9 @@ private:
   slot_void           m_slot_update;
 };
 
-typedef std::unique_ptr<log_buffer> log_buffer_p;
+typedef std::unique_ptr<log_buffer, std::function<void (log_buffer*)>> log_buffer_ptr;
 
-log_buffer_p log_open_log_buffer(const char* name) LIBTORRENT_EXPORT;
+[[gnu::visibility("default")]] log_buffer_ptr log_open_log_buffer(const char* name);
 
 }
 

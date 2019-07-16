@@ -57,12 +57,12 @@ LibTorrentTest_SOURCES = \
 	\
 	torrent/utils/log_test.cc \
 	torrent/utils/log_test.h \
-	torrent/utils/log_buffer_test.cc \
-	torrent/utils/log_buffer_test.h \
 	torrent/utils/option_strings_test.cc \
 	torrent/utils/option_strings_test.h \
 	torrent/utils/test_extents.cc \
 	torrent/utils/test_extents.h \
+	torrent/utils/test_log_buffer.cc \
+	torrent/utils/test_log_buffer.h \
 	torrent/utils/test_queue_buckets.cc \
 	torrent/utils/test_queue_buckets.h \
 	torrent/utils/test_uri_parser.cc \

@@ -21,6 +21,7 @@
 
 CPPUNIT_REGISTRY_ADD_TO_DEFAULT("net");
 CPPUNIT_REGISTRY_ADD_TO_DEFAULT("torrent/net");
+CPPUNIT_REGISTRY_ADD_TO_DEFAULT("torrent/utils");
 
 void
 do_test_panic(int signum) {
