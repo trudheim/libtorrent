@@ -30,25 +30,19 @@ typedef std::unique_ptr<torrent::socket_listen, test_sl_deleter> test_sl_unique_
   CPPUNIT_ASSERT(sl->socket_address_port() == 5005);
 
 #define TEST_SL_ASSERT_OPEN_PORT(_sap_bind, _sap_result, _first_port, _last_port, _itr_port, _flags) \
-  mock_expect(&torrent::poll_event_open, (torrent::Event*)sl.get());    \
-  mock_expect(&torrent::poll_event_insert_read, (torrent::Event*)sl.get()); \
-  mock_expect(&torrent::poll_event_insert_error, (torrent::Event*)sl.get()); \
+  event_expect_open_re(0);                                              \
   CPPUNIT_ASSERT(sl->open(_sap_bind, _first_port, _last_port, _itr_port, _flags)); \
   CPPUNIT_ASSERT(sl->is_open());                                        \
   CPPUNIT_ASSERT(torrent::sa_equal(sl->socket_address(), _sap_result.get()));
 
 #define TEST_SL_ASSERT_OPEN_SEQUENTIAL(_sap_bind, _sap_result, _first_port, _last_port, _flags) \
-  mock_expect(&torrent::poll_event_open, (torrent::Event*)sl.get());    \
-  mock_expect(&torrent::poll_event_insert_read, (torrent::Event*)sl.get()); \
-  mock_expect(&torrent::poll_event_insert_error, (torrent::Event*)sl.get()); \
+  event_expect_open_re(0);                                              \
   CPPUNIT_ASSERT(sl->open_sequential(_sap_bind, _first_port, _last_port, _flags)); \
   CPPUNIT_ASSERT(sl->is_open());                                        \
   CPPUNIT_ASSERT(torrent::sa_equal(sl->socket_address(), _sap_result.get()));
 
 #define TEST_SL_ASSERT_OPEN_RANDOMIZE(_sap_bind, _sap_result, _first_port, _last_port, _flags) \
-  mock_expect(&torrent::poll_event_open, (torrent::Event*)sl.get());    \
-  mock_expect(&torrent::poll_event_insert_read, (torrent::Event*)sl.get()); \
-  mock_expect(&torrent::poll_event_insert_error, (torrent::Event*)sl.get()); \
+  event_expect_open_re(0);                                              \
   CPPUNIT_ASSERT(sl->open_randomize(_sap_bind, _first_port, _last_port, _flags)); \
   CPPUNIT_ASSERT(sl->is_open());                                        \
   CPPUNIT_ASSERT(torrent::sa_equal(sl->socket_address(), _sap_result.get()));

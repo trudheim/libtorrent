@@ -17,10 +17,10 @@ random_uniform_template(T min, T max) {
   if (min == max)
     return min;
 
-  if (min == std::numeric_limits<T>::min() && max == std::numeric_limits<T>::max())
-    return (T)rand();
+  std::random_device rd;
+  std::mt19937 mt(rd());
 
-  return min + (T)rand() % (max - min + 1);
+  return min + std::uniform_int_distribution<T>(min, max)(mt) % (max - min + 1);
 }  
 
 uint16_t random_uniform_uint16(uint16_t min, uint16_t max) { return random_uniform_template<uint16_t>(min, max); }

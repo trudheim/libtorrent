@@ -282,7 +282,7 @@ attempt_listen_open(const sockaddr* bind_sa, int bind_flags) {
     return -1;
   }
 
-  LT_LOG_SOCKADDR("listen open successed (flags:0x%x)", bind_sa, open_flags);
+  LT_LOG_SOCKADDR("listen open success (flags:0x%x)", bind_sa, open_flags);
   return fd;
 }
 
@@ -301,6 +301,8 @@ get_bind_ports(const bind_manager* manager, const bind_struct& itr) {
     port_itr = port_first;
   else
     port_itr = random_uniform_uint16(port_first, port_last);
+
+  // LT_LOG_SOCKADDR("listen get bind ports result (pf:%" PRIu16 " pi:%" PRIu16 " pl:%" PRIu16 ")", itr.address.get(), port_first, port_itr, port_last);
 
   if (port_itr == 0 || port_itr < port_first || port_itr > port_last)
     throw internal_error("port_itr == 0 || port_itr < port_first || port_itr > port_last");

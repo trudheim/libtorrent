@@ -126,9 +126,6 @@ test_bind_manager::test_add_bind() {
   };
 }
 
-// TODO: Restrict characters in names.
-// TODO: Test add_bind with flags.
-
 void
 test_bind_manager::test_add_bind_error() {
   torrent::bind_manager bm;
@@ -512,3 +509,6 @@ test_bind_manager::test_listen_open_bind() {
 }
 
 // Test open errors.
+// TODO: Restrict characters in names.
+// TODO: Test add_bind with flags.
+// TODO: Test global vs. bind port range.
