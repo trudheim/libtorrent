@@ -3,54 +3,54 @@
 class test_bind_manager : public test_fixture {
   CPPUNIT_TEST_SUITE(test_bind_manager);
 
-  CPPUNIT_TEST(test_basic);
-  CPPUNIT_TEST(test_backlog);
-  CPPUNIT_TEST(test_flags);
+  CPPUNIT_TEST(basic);
+  CPPUNIT_TEST(backlog);
+  CPPUNIT_TEST(flags);
 
-  CPPUNIT_TEST(test_add_bind);
-  CPPUNIT_TEST(test_add_bind_error);
-  CPPUNIT_TEST(test_add_bind_priority);
-  CPPUNIT_TEST(test_add_bind_v4mapped);
-  CPPUNIT_TEST(test_remove_bind);
+  CPPUNIT_TEST(add_bind);
+  CPPUNIT_TEST(add_bind_error);
+  CPPUNIT_TEST(add_bind_priority);
+  CPPUNIT_TEST(add_bind_v4mapped);
+  CPPUNIT_TEST(remove_bind);
 
-  CPPUNIT_TEST(test_connect_socket);
-  CPPUNIT_TEST(test_connect_socket_error);
-  CPPUNIT_TEST(test_connect_socket_v4bound);
-  CPPUNIT_TEST(test_connect_socket_v6bound);
-  CPPUNIT_TEST(test_connect_socket_v4only);
-  CPPUNIT_TEST(test_connect_socket_v6only);
-  CPPUNIT_TEST(test_connect_socket_block_connect);
+  CPPUNIT_TEST(connect_socket);
+  CPPUNIT_TEST(connect_socket_error);
+  CPPUNIT_TEST(connect_socket_v4bound);
+  CPPUNIT_TEST(connect_socket_v6bound);
+  CPPUNIT_TEST(connect_socket_v4only);
+  CPPUNIT_TEST(connect_socket_v6only);
+  CPPUNIT_TEST(connect_socket_block_connect);
 
-  CPPUNIT_TEST(test_listen_socket_randomize);
-  CPPUNIT_TEST(test_listen_socket_sequential);
+  CPPUNIT_TEST(listen_socket_randomize);
+  CPPUNIT_TEST(listen_socket_sequential);
 
-  CPPUNIT_TEST(test_listen_open_bind);
-  CPPUNIT_TEST(test_listen_open_bind_error);
+  CPPUNIT_TEST(listen_open_bind);
+  CPPUNIT_TEST(listen_open_bind_error);
 
   CPPUNIT_TEST_SUITE_END();
 
 public:
-  void test_basic();
-  void test_backlog();
-  void test_flags();
+  void basic();
+  void backlog();
+  void flags();
 
-  void test_add_bind();
-  void test_add_bind_error();
-  void test_add_bind_priority();
-  void test_add_bind_v4mapped();
-  void test_remove_bind();
+  void add_bind();
+  void add_bind_error();
+  void add_bind_priority();
+  void add_bind_v4mapped();
+  void remove_bind();
 
-  void test_connect_socket();
-  void test_connect_socket_error();
-  void test_connect_socket_v4bound();
-  void test_connect_socket_v6bound();
-  void test_connect_socket_v4only();
-  void test_connect_socket_v6only();
-  void test_connect_socket_block_connect();
+  void connect_socket();
+  void connect_socket_error();
+  void connect_socket_v4bound();
+  void connect_socket_v6bound();
+  void connect_socket_v4only();
+  void connect_socket_v6only();
+  void connect_socket_block_connect();
 
-  void test_listen_socket_randomize();
-  void test_listen_socket_sequential();
+  void listen_socket_randomize();
+  void listen_socket_sequential();
 
-  void test_listen_open_bind();
-  void test_listen_open_bind_error();
+  void listen_open_bind();
+  void listen_open_bind_error();
 };

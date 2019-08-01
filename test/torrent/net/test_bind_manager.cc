@@ -51,7 +51,7 @@ expect_bind_listen_open(const torrent::c_sa_unique_ptr& sap, uint16_t first_port
 }
 
 void
-test_bind_manager::test_basic() {
+test_bind_manager::basic() {
   torrent::bind_manager bm;
 
   CPPUNIT_ASSERT(bm.flags() == torrent::bind_manager::flag_port_randomize);
@@ -65,7 +65,7 @@ test_bind_manager::test_basic() {
 }
 
 void
-test_bind_manager::test_backlog() {
+test_bind_manager::backlog() {
   torrent::bind_manager bm;
 
   CPPUNIT_ASSERT(bm.listen_backlog() == SOMAXCONN);
@@ -84,7 +84,7 @@ test_bind_manager::test_backlog() {
 }
 
 void
-test_bind_manager::test_flags() {
+test_bind_manager::flags() {
   torrent::bind_manager bm;
 
   CPPUNIT_ASSERT(bm.flags() == torrent::bind_manager::flag_port_randomize);
@@ -107,7 +107,7 @@ test_bind_manager::test_flags() {
 }
 
 void
-test_bind_manager::test_add_bind() {
+test_bind_manager::add_bind() {
   { TEST_BM_BEGIN("sin_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("sin_any", 100, sin_any.get(), 0));
     CPPUNIT_ASSERT(bm.size() == 1);
@@ -139,7 +139,7 @@ test_bind_manager::test_add_bind() {
 }
 
 void
-test_bind_manager::test_add_bind_error() {
+test_bind_manager::add_bind_error() {
   torrent::bind_manager bm;
 
   CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, wrap_ai_get_first_sa("0.0.0.0").get(), 0));
@@ -167,7 +167,7 @@ test_bind_manager::test_add_bind_error() {
 }
 
 void
-test_bind_manager::test_add_bind_priority() {
+test_bind_manager::add_bind_priority() {
   torrent::bind_manager bm;
   torrent::sa_unique_ptr sa = wrap_ai_get_first_sa("0.0.0.0");
 
@@ -188,7 +188,7 @@ test_bind_manager::test_add_bind_priority() {
 }
 
 void
-test_bind_manager::test_add_bind_v4mapped() {
+test_bind_manager::add_bind_v4mapped() {
   { TEST_BM_BEGIN("sin6_v4_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_v4_any.get(), 0));
     CPPUNIT_ASSERT(compare_bind_base(bm.back(), 100, torrent::bind_manager::flag_listen_closed | torrent::bind_manager::flag_v4only));
@@ -205,7 +205,7 @@ test_bind_manager::test_add_bind_v4mapped() {
 }
 
 void
-test_bind_manager::test_remove_bind() {
+test_bind_manager::remove_bind() {
   torrent::bind_manager bm;
 
   CPPUNIT_ASSERT(!bm.remove_bind("default"));
@@ -217,7 +217,7 @@ test_bind_manager::test_remove_bind() {
 }
 
 void
-test_bind_manager::test_connect_socket() {
+test_bind_manager::connect_socket() {
   { TEST_BM_BEGIN("sin6_any, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
     expect_fd_inet_tcp_nonblock(1000);
@@ -239,7 +239,7 @@ test_bind_manager::test_connect_socket() {
 }
 
 void
-test_bind_manager::test_connect_socket_error() {
+test_bind_manager::connect_socket_error() {
   { TEST_BM_BEGIN("sin6_any, connect zero port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
     CPPUNIT_ASSERT(bm.connect_socket(sin_1.get(), 0) == -1);
@@ -265,7 +265,7 @@ test_bind_manager::test_connect_socket_error() {
 }
 
 void
-test_bind_manager::test_connect_socket_v4bound() {
+test_bind_manager::connect_socket_v4bound() {
   { TEST_BM_BEGIN("sin_bnd, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), 0));
     expect_fd_inet_tcp_nonblock(1000);
@@ -285,7 +285,7 @@ test_bind_manager::test_connect_socket_v4bound() {
 }
 
 void
-test_bind_manager::test_connect_socket_v6bound() {
+test_bind_manager::connect_socket_v6bound() {
   { TEST_BM_BEGIN("sin6_bnd, connect sin_1_5000 fails");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_bnd.get(), 0));
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == -1);
@@ -303,7 +303,7 @@ test_bind_manager::test_connect_socket_v6bound() {
 }
 
 void
-test_bind_manager::test_connect_socket_v4only() {
+test_bind_manager::connect_socket_v4only() {
   { TEST_BM_BEGIN("sin_any, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), torrent::bind_manager::flag_v4only));
     expect_fd_inet_tcp_nonblock(1000);
@@ -339,7 +339,7 @@ test_bind_manager::test_connect_socket_v4only() {
 }
 
 void
-test_bind_manager::test_connect_socket_v6only() {
+test_bind_manager::connect_socket_v6only() {
   { TEST_BM_BEGIN("sin6_any, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), torrent::bind_manager::flag_v6only));
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == -1);
@@ -371,7 +371,7 @@ test_bind_manager::test_connect_socket_v6only() {
 }
 
 void
-test_bind_manager::test_connect_socket_block_connect() {
+test_bind_manager::connect_socket_block_connect() {
   { TEST_BM_BEGIN("sin6_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), torrent::bind_manager::flag_block_connect));
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == -1);
@@ -399,7 +399,7 @@ test_bind_manager::test_connect_socket_block_connect() {
 }
 
 void
-test_bind_manager::test_listen_socket_randomize() {
+test_bind_manager::listen_socket_randomize() {
   { TEST_BM_BEGIN("sin_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
     expect_fd_inet_tcp_nonblock_reuseaddr(1000);
@@ -445,7 +445,7 @@ test_bind_manager::test_listen_socket_randomize() {
 }
 
 void
-test_bind_manager::test_listen_socket_sequential() {
+test_bind_manager::listen_socket_sequential() {
   { TEST_BM_BEGIN("sin_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
     expect_fd_inet_tcp_nonblock_reuseaddr(1000);
@@ -463,7 +463,7 @@ test_bind_manager::test_listen_socket_sequential() {
 }
 
 void
-test_bind_manager::test_listen_open_bind() {
+test_bind_manager::listen_open_bind() {
   { TEST_BM_BEGIN("sin_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
     expect_bind_listen_open(c_sin_any_6900);
@@ -497,7 +497,7 @@ test_bind_manager::test_listen_open_bind() {
 }
 
 void
-test_bind_manager::test_listen_open_bind_error() {
+test_bind_manager::listen_open_bind_error() {
   { TEST_BM_BEGIN("sin6_any open twice");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
     expect_bind_listen_open(c_sin6_any_6900);
@@ -505,7 +505,6 @@ test_bind_manager::test_listen_open_bind_error() {
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
 
-  // Don't open unbindable addresses.
   // Fail gracefully when all ports are taken.
 }
 
