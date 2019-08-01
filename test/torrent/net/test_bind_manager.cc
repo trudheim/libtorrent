@@ -2,14 +2,13 @@
 
 #include "test_bind_manager.h"
 
-#include "helpers/fd.h"
+#include "helpers/expect_fd.h"
+#include "helpers/expect_utils.h"
 #include "helpers/network.h"
 
 #include "torrent/exceptions.h"
 #include "torrent/net/bind_manager.h"
-#include "torrent/net/socket_address.h"
 #include "torrent/utils/log.h"
-#include "torrent/utils/random.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_bind_manager, "torrent/net");
 
@@ -36,6 +35,19 @@ inline bool
 compare_listen_result(const torrent::listen_result_type& lhs, int rhs_fd, const torrent::c_sa_unique_ptr& rhs_sap) {
   return lhs.fd == rhs_fd &&
     ((lhs.address && rhs_sap) || ((lhs.address && rhs_sap) && torrent::sap_equal(lhs.address, rhs_sap)));
+}
+
+inline void
+expect_bind_listen_open(const torrent::c_sa_unique_ptr& sap, uint16_t first_port = 6881, uint16_t last_port = 6999) {
+  if (torrent::sap_is_inet(sap))
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+  else 
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+
+  expect_fd_bind_listen(1000, sap);
+  expect_random_uniform_uint16(torrent::sap_port(sap), first_port, last_port);
+  expect_event_open_re(0);
+  expect_event_closed_fd(0, 1000);
 }
 
 void
@@ -208,20 +220,20 @@ void
 test_bind_manager::test_connect_socket() {
   { TEST_BM_BEGIN("sin6_any, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_connect(1000, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_connect(1000, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin6_any, connect sin6_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet6_tcp_nonblock(1000);
-    fd_expect_connect(1000, c_sin6_1_5000);
+    expect_fd_inet6_tcp_nonblock(1000);
+    expect_fd_connect(1000, c_sin6_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin6_any, connect sin6_v4_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_connect(1000, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_connect(1000, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_v4_1_5000.get(), 0) == 1000);
   };
 }
@@ -256,8 +268,8 @@ void
 test_bind_manager::test_connect_socket_v4bound() {
   { TEST_BM_BEGIN("sin_bnd, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), 0));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin_bnd, connect sin6_1_5000 fails");
@@ -266,8 +278,8 @@ test_bind_manager::test_connect_socket_v4bound() {
   }
   { TEST_BM_BEGIN("sin_bnd, connect sin6_v4_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), 0));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_v4_1_5000.get(), 0) == 1000);
   };
 }
@@ -280,8 +292,8 @@ test_bind_manager::test_connect_socket_v6bound() {
   };
   { TEST_BM_BEGIN("sin6_bnd, connect sin6_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_bnd.get(), 0));
-    fd_expect_inet6_tcp_v6only_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin6_bnd, c_sin6_1_5000);
+    expect_fd_inet6_tcp_v6only_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin6_bnd, c_sin6_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin6_bnd, connect sin6_v4_1_5000 fails");
@@ -294,8 +306,8 @@ void
 test_bind_manager::test_connect_socket_v4only() {
   { TEST_BM_BEGIN("sin_any, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), torrent::bind_manager::flag_v4only));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_connect(1000, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_connect(1000, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin_any, connect sin6_1_5000 fails");
@@ -304,14 +316,14 @@ test_bind_manager::test_connect_socket_v4only() {
   };
   { TEST_BM_BEGIN("sin_any, connect sin6_v4_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), torrent::bind_manager::flag_v4only));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_connect(1000, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_connect(1000, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_v4_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin_bnd, connect sin_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), torrent::bind_manager::flag_v4only));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin_bnd, connect sin6_1_5000 fails");
@@ -320,8 +332,8 @@ test_bind_manager::test_connect_socket_v4only() {
   };
   { TEST_BM_BEGIN("sin_bnd, connect sin6_v4_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), torrent::bind_manager::flag_v4only));
-    fd_expect_inet_tcp_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
+    expect_fd_inet_tcp_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin_bnd, c_sin_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_v4_1_5000.get(), 0) == 1000);
   };
 }
@@ -334,8 +346,8 @@ test_bind_manager::test_connect_socket_v6only() {
   };
   { TEST_BM_BEGIN("sin6_any, connect sin6_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), torrent::bind_manager::flag_v6only));
-    fd_expect_inet6_tcp_v6only_nonblock(1000);
-    fd_expect_connect(1000, c_sin6_1_5000);
+    expect_fd_inet6_tcp_v6only_nonblock(1000);
+    expect_fd_connect(1000, c_sin6_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin6_any, connect sin6_v4_1_5000");
@@ -348,8 +360,8 @@ test_bind_manager::test_connect_socket_v6only() {
   };
   { TEST_BM_BEGIN("sin6_bnd, connect sin6_1_5000");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_bnd.get(), torrent::bind_manager::flag_v6only));
-    fd_expect_inet6_tcp_v6only_nonblock(1000);
-    fd_expect_bind_connect(1000, c_sin6_bnd, c_sin6_1_5000);
+    expect_fd_inet6_tcp_v6only_nonblock(1000);
+    expect_fd_bind_connect(1000, c_sin6_bnd, c_sin6_1_5000);
     CPPUNIT_ASSERT(bm.connect_socket(sin6_1_5000.get(), 0) == 1000);
   };
   { TEST_BM_BEGIN("sin6_bnd, connect sin6_v4_1_5000");
@@ -390,44 +402,44 @@ void
 test_bind_manager::test_listen_socket_randomize() {
   { TEST_BM_BEGIN("sin_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6881, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin_any_6881);
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6881, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin_any_6881);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin_any_6881));
   };
   { TEST_BM_BEGIN("sin_any, middle port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin_any_6900);
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6900, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin_any_6900);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin_any_6900));
   };
   { TEST_BM_BEGIN("sin_any, last port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6999, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin_any_6999);
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6999, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin_any_6999);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin_any_6999));
   };
   { TEST_BM_BEGIN("sin6_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6881, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin6_any_6881);
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6881, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin6_any_6881);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin6_any_6881));
   };
   { TEST_BM_BEGIN("sin6_any, middle port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin6_any_6900);
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6900, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin6_any_6900);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin6_any_6900));
   };
   { TEST_BM_BEGIN("sin6_any, last port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6999, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_bind_listen(1000, c_sin6_any_6999);
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+    expect_random_uniform_uint16(6999, 6881, 6999);
+    expect_fd_bind_listen(1000, c_sin6_any_6999);
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin6_any_6999));
   };
 }
@@ -436,15 +448,15 @@ void
 test_bind_manager::test_listen_socket_sequential() {
   { TEST_BM_BEGIN("sin_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin_any_6881);
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+    expect_fd_bind_listen(1000, c_sin_any_6881);
     CPPUNIT_ASSERT_NO_THROW(bm.set_port_randomize(false));
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin_any_6881));
   };
   { TEST_BM_BEGIN("sin6_any, first port");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin6_any_6881);
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+    expect_fd_bind_listen(1000, c_sin6_any_6881);
     CPPUNIT_ASSERT_NO_THROW(bm.set_port_randomize(false));
     CPPUNIT_ASSERT(compare_listen_result(bm.listen_socket(0), 1000, c_sin6_any_6881));
   };
@@ -454,61 +466,56 @@ void
 test_bind_manager::test_listen_open_bind() {
   { TEST_BM_BEGIN("sin_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin_any_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin6_any_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin6_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_v4_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_v4_any.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin_any_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin_bnd_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_bnd.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet6_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin6_bnd_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin6_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_v4_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_v4_bnd.get(), 0));
-    mock_expect(&torrent::random_uniform_uint16, (uint16_t)6900, (uint16_t)6881, (uint16_t)6999);
-    fd_expect_inet_tcp_nonblock_reuseaddr(1000);
-    fd_expect_bind_listen(1000, c_sin_bnd_6900);
-    event_expect_open_re(0);
-    event_expect_closed_fd(0, 1000);
+    expect_bind_listen_open(c_sin_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
 }
 
-// Test open errors.
-// TODO: Restrict characters in names.
-// TODO: Test add_bind with flags.
-// TODO: Test global vs. bind port range.
+void
+test_bind_manager::test_listen_open_bind_error() {
+  { TEST_BM_BEGIN("sin6_any open twice");
+    CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
+    expect_bind_listen_open(c_sin6_any_6900);
+    CPPUNIT_ASSERT(bm.listen_open_bind("default"));
+    CPPUNIT_ASSERT(bm.listen_open_bind("default"));
+  };
+
+  // Don't open unbindable addresses.
+  // Fail gracefully when all ports are taken.
+}
+
+// Test bind accept connections.
+
+// Open with multiple bind's available.
+// Test listen_open/close_all.
+
+
+
+// Restrict characters in names.
+// Test add_bind with flags.
+// Test global vs. bind port range.

@@ -473,10 +473,10 @@ bind_manager::local_v6_address() const {
 
 bool
 bind_manager::m_listen_open_bind(bind_struct& bind) {
-  // if (bind.listen->is_open()) {
-  //   LT_LOG_SOCKADDR("listen port already open, skipping (name:%s)", bind.name);
-  //   return true;
-  // }
+  if (bind.listen->is_open()) {
+    LT_LOG_SOCKADDR("listen port already open, skipping (name:%s)", bind.address.get(), bind.name.c_str());
+    return true;
+  }
 
   if (!(bind.flags & flag_listen_closed)) {
     LT_LOG_SOCKADDR("could not open listen port, flag listen_closed not set (name:%s, flags:%x)", bind.address.get(), bind.name.c_str(), bind.flags);

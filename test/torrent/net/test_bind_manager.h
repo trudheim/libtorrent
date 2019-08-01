@@ -25,6 +25,7 @@ class test_bind_manager : public test_fixture {
   CPPUNIT_TEST(test_listen_socket_sequential);
 
   CPPUNIT_TEST(test_listen_open_bind);
+  CPPUNIT_TEST(test_listen_open_bind_error);
 
   CPPUNIT_TEST_SUITE_END();
 
@@ -51,4 +52,5 @@ public:
   void test_listen_socket_sequential();
 
   void test_listen_open_bind();
+  void test_listen_open_bind_error();
 };
