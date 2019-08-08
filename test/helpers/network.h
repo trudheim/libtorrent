@@ -95,10 +95,15 @@
   auto c_sin6_2_5000 = wrap_ai_get_first_c_sa("ff02::2", "5000");       \
   auto c_sin6_2_5100 = wrap_ai_get_first_c_sa("ff02::2", "5100");
 
-
 inline bool
 compare_sin6_addr(in6_addr lhs, in6_addr rhs) {
   return std::equal(lhs.s6_addr, lhs.s6_addr + 16, rhs.s6_addr);
+}
+
+inline bool
+compare_listen_result(const torrent::listen_result_type& lhs, int rhs_fd, const torrent::c_sa_unique_ptr& rhs_sap) {
+  return lhs.fd == rhs_fd &&
+    ((lhs.address && rhs_sap) || ((lhs.address && rhs_sap) && torrent::sap_equal(lhs.address, rhs_sap)));
 }
 
 inline torrent::sa_unique_ptr

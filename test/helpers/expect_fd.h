@@ -6,6 +6,15 @@
 #include <fcntl.h>
 #include <torrent/event.h>
 #include <torrent/net/fd.h>
+#include <torrent/net/socket_address.h>
+
+typedef std::vector<torrent::sa_unique_ptr> sap_cache_type;
+
+inline const sockaddr*
+sap_cache_copy_addr_c_ptr(sap_cache_type& sap_cache, const torrent::c_sa_unique_ptr& sap, uint16_t port = 0) {
+  sap_cache.push_back(torrent::sap_copy_addr(sap, port));
+  return sap_cache.back().get();
+}
 
 inline void
 expect_event_open_re(int idx) {
@@ -72,15 +81,22 @@ expect_fd_inet6_tcp_v6only_nonblock_reuseaddr(int fd) {
 }
 
 inline void
-expect_fd_bind_listen(int fd, const torrent::c_sa_unique_ptr& sap) {
-  mock_expect(&torrent::fd__bind, 0, fd, sap.get(), (socklen_t)torrent::sap_length(sap));
-  mock_expect(&torrent::fd__listen, 0, fd, SOMAXCONN);
-}
-
-inline void
 expect_fd_bind_connect(int fd, const torrent::c_sa_unique_ptr& bind_sap, const torrent::c_sa_unique_ptr& connect_sap) {
   mock_expect(&torrent::fd__bind, 0, fd, bind_sap.get(), (socklen_t)torrent::sap_length(bind_sap));
   mock_expect(&torrent::fd__connect, 0, fd, connect_sap.get(), (socklen_t)torrent::sap_length(connect_sap));
+}
+
+inline void
+expect_fd_bind_fail_range(int fd, sap_cache_type& sap_cache, const torrent::c_sa_unique_ptr& sap, uint16_t first_port, uint16_t last_port) {
+  do {
+    mock_expect(&torrent::fd__bind, -1, fd, sap_cache_copy_addr_c_ptr(sap_cache, sap, first_port), (socklen_t)torrent::sap_length(sap));
+  } while (first_port++ != last_port);
+}
+
+inline void
+expect_fd_bind_listen(int fd, const torrent::c_sa_unique_ptr& sap) {
+  mock_expect(&torrent::fd__bind, 0, fd, sap.get(), (socklen_t)torrent::sap_length(sap));
+  mock_expect(&torrent::fd__listen, 0, fd, SOMAXCONN);
 }
 
 inline void

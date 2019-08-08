@@ -31,12 +31,6 @@ struct LIBTORRENT_EXPORT bind_struct {
   uint16_t        listen_socket_address_port() const;
 };
 
-// TODO: Move listen to bind_struct.
-struct listen_result_type {
-  int fd;
-  sa_unique_ptr address;
-};
-
 class LIBTORRENT_EXPORT bind_manager : private std::vector<bind_struct> {
 public:
   typedef std::vector<bind_struct> base_type;

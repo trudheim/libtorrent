@@ -18,6 +18,9 @@ LibTorrentTest_LDADD = \
 	../src/torrent/utils/libsub_torrentutils.la
 
 LibTorrentTest_SOURCES = \
+	helpers/expect_fd.h \
+	helpers/expect_utils.h \
+	helpers/mock_compare.h \
 	helpers/mock_function.cc \
 	helpers/mock_function.h \
 	helpers/network.h \

@@ -14,7 +14,7 @@ CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_bind_manager, "torrent/net");
 
 #define TEST_BM_BEGIN(name)                                     \
   torrent::bind_manager bm;                                     \
-  std::vector<torrent::sa_unique_ptr> sap_cache;                \
+  sap_cache_type sap_cache;                                     \
   lt_log_print(torrent::LOG_MOCK_CALLS, "bm_begin: %s", name);  \
   TEST_DEFAULT_SA;
 
@@ -31,23 +31,32 @@ compare_bind_base(const torrent::bind_struct& bs,
     listen_port_last == bs.listen_port_last;
 }
 
-inline bool
-compare_listen_result(const torrent::listen_result_type& lhs, int rhs_fd, const torrent::c_sa_unique_ptr& rhs_sap) {
-  return lhs.fd == rhs_fd &&
-    ((lhs.address && rhs_sap) || ((lhs.address && rhs_sap) && torrent::sap_equal(lhs.address, rhs_sap)));
-}
-
 inline void
-expect_bind_listen_open(const torrent::c_sa_unique_ptr& sap, uint16_t first_port = 6881, uint16_t last_port = 6999) {
+expect_bind_listen_open_bind_listen(const torrent::c_sa_unique_ptr& sap) {
   if (torrent::sap_is_inet(sap))
     expect_fd_inet_tcp_nonblock_reuseaddr(1000);
-  else 
+  else
     expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
 
   expect_fd_bind_listen(1000, sap);
-  expect_random_uniform_uint16(torrent::sap_port(sap), first_port, last_port);
   expect_event_open_re(0);
   expect_event_closed_fd(0, 1000);
+}
+
+inline void
+expect_bind_listen_open_fail(const torrent::c_sa_unique_ptr& sap) {
+  if (torrent::sap_is_inet(sap))
+    expect_fd_inet_tcp_nonblock_reuseaddr(1000);
+  else
+    expect_fd_inet6_tcp_nonblock_reuseaddr(1000);
+
+  mock_expect(&torrent::fd__close, 0, 1000);
+}
+
+inline void
+expect_bind_listen_open_random(const torrent::c_sa_unique_ptr& sap, uint16_t first_port = 6881, uint16_t last_port = 6999) {
+  expect_bind_listen_open_bind_listen(sap);
+  expect_random_uniform_uint16(torrent::sap_port(sap), first_port, last_port);
 }
 
 void
@@ -466,32 +475,32 @@ void
 test_bind_manager::listen_open_bind() {
   { TEST_BM_BEGIN("sin_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_any.get(), 0));
-    expect_bind_listen_open(c_sin_any_6900);
+    expect_bind_listen_open_random(c_sin_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    expect_bind_listen_open(c_sin6_any_6900);
+    expect_bind_listen_open_random(c_sin6_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_v4_any");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_v4_any.get(), 0));
-    expect_bind_listen_open(c_sin_any_6900);
+    expect_bind_listen_open_random(c_sin_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin_bnd.get(), 0));
-    expect_bind_listen_open(c_sin_bnd_6900);
+    expect_bind_listen_open_random(c_sin_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_bnd.get(), 0));
-    expect_bind_listen_open(c_sin6_bnd_6900);
+    expect_bind_listen_open_random(c_sin6_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
   { TEST_BM_BEGIN("sin6_v4_bnd");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_v4_bnd.get(), 0));
-    expect_bind_listen_open(c_sin_bnd_6900);
+    expect_bind_listen_open_random(c_sin_bnd_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
 }
@@ -500,12 +509,18 @@ void
 test_bind_manager::listen_open_bind_error() {
   { TEST_BM_BEGIN("sin6_any open twice");
     CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
-    expect_bind_listen_open(c_sin6_any_6900);
+    expect_bind_listen_open_random(c_sin6_any_6900);
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
     CPPUNIT_ASSERT(bm.listen_open_bind("default"));
   };
-
-  // Fail gracefully when all ports are taken.
+  { TEST_BM_BEGIN("sin6_any no available ports");
+    CPPUNIT_ASSERT_NO_THROW(bm.add_bind("default", 100, sin6_any.get(), 0));
+    expect_bind_listen_open_fail(c_sin6_any);
+    expect_random_uniform_uint16(6900, 6881, 6999);
+    expect_fd_bind_fail_range(1000, sap_cache, c_sin6_any, 6900, 6999);
+    expect_fd_bind_fail_range(1000, sap_cache, c_sin6_any, 6881, 6899);
+    CPPUNIT_ASSERT(!bm.listen_open_bind("default"));
+  };
 }
 
 // Test bind accept connections.
