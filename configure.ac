@@ -103,6 +103,8 @@ AC_ARG_ENABLE(cyrus-rc4,
   ]
 )
 
+TORRENT_WITH_UDNS()
+
 AC_CHECK_FUNCS(posix_memalign)
 
 TORRENT_CHECK_MADVISE()
