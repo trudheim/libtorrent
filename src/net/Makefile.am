@@ -9,6 +9,8 @@ libsub_net_la_SOURCES = \
 	listen.cc \
 	listen.h \
 	protocol_buffer.h \
+	resolver_udns.cc \
+	resolver_udns.h \
 	socket_base.cc \
         socket_base.h \
 	socket_datagram.cc \

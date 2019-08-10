@@ -49,7 +49,7 @@
 #include "manager.h"
 
 #ifdef USE_UDNS
-#include "utils/udnsevent.h"
+#include "net/resolver_udns.h"
 #endif
 
 namespace torrent {
@@ -70,11 +70,11 @@ public:
   }
 
   void cancel(void *query) {
-    m_udnsevent.cancel(static_cast<udns_query*>(query));
+    m_udnsevent.cancel(static_cast<query_udns*>(query));
   }
 
 protected:
-  UdnsEvent           m_udnsevent;
+  resolver_udns m_udnsevent;
 };
 #define ASYNC_RESOLVER_IMPL UdnsAsyncResolver
 #else

@@ -176,6 +176,7 @@ public:
   void                set_listen_port(port_type p)            { m_listen_port = p; }
   void                set_listen_backlog(int v);
 
+  // TODO: Not implemented.
   void*               enqueue_async_resolve(const char *name, int family, resolver_callback *cbck);
   void                flush_async_resolves();
   void                cancel_async_resolve(void *query);

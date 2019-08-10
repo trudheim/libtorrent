@@ -9,8 +9,6 @@ libsub_utils_la_SOURCES = \
 	sha1.h \
 	sha_fast.cc \
 	sha_fast.h \
-	queue_buckets.h \
-	udnsevent.cc \
-	udnsevent.h
+	queue_buckets.h
 
 AM_CPPFLAGS = -I$(srcdir) -I$(srcdir)/.. -I$(top_srcdir)
