@@ -10,14 +10,43 @@
 #include <sys/socket.h>
 
 #include "torrent/common.h"
+#include "torrent/utils/log.h"
 #include "globals.h"
 #include "manager.h"
 #include "torrent/poll.h"
 
+#include "rak/socket_address.h"
+
+#define LT_LOG(log_fmt, ...)                                            \
+  lt_log_print(LOG_NET_RESOLVER, "resolver: " log_fmt, __VA_ARGS__);
+#define LT_LOG_SOCKADDR(log_fmt, sa, ...)                               \
+  lt_log_print(LOG_NET_RESOLVER, "resolver->%s: " log_fmt, rak::socket_address::cast_from(sa)->pretty_address_str().c_str(), __VA_ARGS__);
+
 namespace torrent {
 
+static inline void
+query_list_erase(resolver_udns::query_list_type& list, query_udns* query) {
+  auto itr = std::find_if(list.begin(), list.end(), [query](resolver_udns::query_ptr& q){ return q.get() == query; });
+
+  if (itr != list.end())
+    list.erase(itr);
+}
+
+static inline resolver_udns::query_ptr
+query_list_move(resolver_udns::query_list_type& list, query_udns* query) {
+  auto itr = std::find_if(list.begin(), list.end(), [query](resolver_udns::query_ptr& q){ return q.get() == query; });
+
+  if (itr == list.end())
+    throw internal_error("resolver_udns::query_list_move called with an unknown query pointer");
+
+  auto u_ptr = std::move(*itr);
+  list.erase(itr);
+
+  return u_ptr;
+}
+
 static int
-udnserror_to_gaierror(int udnserror) {
+udns_error_to_gaierror(int udnserror) {
   switch (udnserror) {
     case DNS_E_TEMPFAIL:
       return EAI_AGAIN;
@@ -37,62 +66,79 @@ udnserror_to_gaierror(int udnserror) {
   }
 }
 
+// TODO: Clear the request when done, process timeout will remove
+// queries as the timeout is triggered.
+
+// TODO: Option to wait for both v4 and v6 responses.
+
 // Compatibility layers so udns can call std::function callbacks.
 static void
 a4_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a4 *result, void *data) {
-  struct sockaddr_in sa;
-
   // Udns will free the a4_query after this callback exits.
   query_udns *query = static_cast<query_udns*>(data);
   query->a4_query = nullptr;
 
   if (result == nullptr || result->dnsa4_nrr == 0) {
+    LT_LOG("ipv4 callback no result (hostname:%s family:%i)", query->hostname.c_str(), query->family);
+
     if (query->a6_query == nullptr) {
-      // nothing more to do: call the callback with a failure status
-      (*(query->callback))(nullptr, udnserror_to_gaierror(::dns_status(ctx)));
-      delete query;
+      auto query_ptr = resolver_udns::erase_query(query);
+      (*(query_ptr->callback))(nullptr, udns_error_to_gaierror(::dns_status(ctx)));
     }
-    // else: return and wait to see if we get an a6 response
-  } else {
-    sa.sin_family = AF_INET;
-    sa.sin_port = 0;
-    sa.sin_addr = result->dnsa4_addr[0];
-    if (query->a6_query != nullptr) {
-      ::dns_cancel(ctx, query->a6_query);
-    }
-    (*query->callback)(reinterpret_cast<sockaddr*>(&sa), 0);
-    delete query;
+
+    // Return and wait to see if we get an a6 response.
+    return;
   }
+  
+  if (query->a6_query != nullptr)
+    ::dns_cancel(ctx, query->a6_query);
+
+  struct sockaddr_in sa;
+  sa.sin_family = AF_INET;
+  sa.sin_port = 0;
+  sa.sin_addr = result->dnsa4_addr[0];
+
+  LT_LOG_SOCKADDR("ipv4 callback success (hostname:%s family:%i)", reinterpret_cast<sockaddr*>(&sa), query->hostname.c_str(), query->family);
+
+  auto query_ptr = resolver_udns::erase_query(query);
+  (*query->callback)(reinterpret_cast<sockaddr*>(&sa), 0);
 }
 
 static void
 a6_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a6 *result, void *data) {
-  struct sockaddr_in6 sa;
-
   // Udns will free the a6_query after this callback exits.
   query_udns *query = static_cast<query_udns*>(data);
   query->a6_query = nullptr;
 
   if (result == nullptr || result->dnsa6_nrr == 0) {
+    LT_LOG("ipv6 callback no result (hostname:%s family:%i)", query->hostname.c_str(), query->family);
+
     if (query->a4_query == nullptr) {
-      // nothing more to do: call the callback with a failure status
-      (*(query->callback))(nullptr, udnserror_to_gaierror(::dns_status(ctx)));
-      delete query;
+      auto query_ptr = resolver_udns::erase_query(query);
+      (*(query_ptr->callback))(nullptr, udns_error_to_gaierror(::dns_status(ctx)));
     }
-    // else: return and wait to see if we get an a4 response
-  } else {
-    sa.sin6_family = AF_INET6;
-    sa.sin6_port = 0;
-    sa.sin6_addr = result->dnsa6_addr[0];
-    if (query->a4_query != nullptr) {
-      ::dns_cancel(ctx, query->a4_query);
-    }
-    (*query->callback)(reinterpret_cast<sockaddr*>(&sa), 0);
-    delete query;
+
+    // Return and wait to see if we get an a4 response.
+    return;
   }
+
+  if (query->a4_query != nullptr)
+    ::dns_cancel(ctx, query->a4_query);
+
+  struct sockaddr_in6 sa;
+  sa.sin6_family = AF_INET6;
+  sa.sin6_port = 0;
+  sa.sin6_addr = result->dnsa6_addr[0];
+
+  LT_LOG_SOCKADDR("ipv6 callback (hostname:%s family:%i)", reinterpret_cast<sockaddr*>(&sa), query->hostname.c_str(), query->family);
+
+  auto query_ptr = resolver_udns::erase_query(query);
+  (*query->callback)(reinterpret_cast<sockaddr*>(&sa), 0);
 }
 
 resolver_udns::resolver_udns() {
+  LT_LOG("initializing", 0);
+
   // reinitialize the default context, no-op
   // TODO don't do this here --- do it once in the manager, or in rtorrent
   ::dns_init(nullptr, 0);
@@ -101,12 +147,14 @@ resolver_udns::resolver_udns() {
   m_fileDesc = ::dns_open(m_ctx);
 
   if (m_fileDesc == -1)
-    throw internal_error("dns_init failed");
+    throw internal_error("resolver_udns::resolver_udns call to dns_init failed");
 
   m_task_timeout.slot() = std::bind(&resolver_udns::process_timeouts, this);
 }
 
 resolver_udns::~resolver_udns() {
+  LT_LOG("closing", 0);
+
   priority_queue_erase(&taskScheduler, &m_task_timeout);
   ::dns_close(m_ctx);
   ::dns_free(m_ctx);
@@ -136,11 +184,11 @@ resolver_udns::type_name() const {
 // immediately, without either sending outgoing UDP packets or
 // executing callbacks.
 void*
-resolver_udns::enqueue_resolve(const char* name, int family, resolver_callback* callback) {
-  query_ptr query(new query_udns { nullptr, nullptr, callback, 0 });
+resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callback* callback) {
+  query_ptr query(new query_udns { hostname, family, 0, this, callback, nullptr, nullptr });
 
   if (family == AF_INET || family == AF_UNSPEC) {
-    query->a4_query = ::dns_submit_a4(m_ctx, name, 0, a4_callback_wrapper, query.get());
+    query->a4_query = ::dns_submit_a4(m_ctx, hostname, 0, a4_callback_wrapper, query.get());
 
     if (query->a4_query == nullptr) {
       // XXX udns does query parsing up front and will fail immediately
@@ -149,6 +197,8 @@ resolver_udns::enqueue_resolve(const char* name, int family, resolver_callback* 
       // so we can call the callback later with a failure code
       if (::dns_status(m_ctx) != DNS_E_BADQUERY)
         throw internal_error("resolver_udns call to dns_submit_a4 failed with unrecoverable error");
+
+      LT_LOG("malformed ipv4 query (hostname:%s family:%i)", hostname, family);
 
       // this is what getaddrinfo(3) would return:
       query->error = EAI_NONAME;
@@ -159,13 +209,17 @@ resolver_udns::enqueue_resolve(const char* name, int family, resolver_callback* 
   }
 
   if (family == AF_INET6 || family == AF_UNSPEC) {
-    query->a6_query = ::dns_submit_a6(m_ctx, name, 0, a6_callback_wrapper, query.get());
+    query->a6_query = ::dns_submit_a6(m_ctx, hostname, 0, a6_callback_wrapper, query.get());
 
     if (query->a6_query == nullptr) {
       // it should be impossible for dns_submit_a6 to fail if dns_submit_a4
       // succeeded, but just in case, make it a hard failure:
+      //
+      // TODO: This depends on v4 being the default.
       if (::dns_status(m_ctx) != DNS_E_BADQUERY || query->a4_query != nullptr)
         throw internal_error("resolver_udns call to dns_submit_a6 failed with unrecoverable error");
+
+      LT_LOG("malformed ipv6 query (hostname:%s family:%i)", hostname, family);
 
       query->error = EAI_NONAME;
       m_malformed_queries.push_back(std::move(query));
@@ -173,8 +227,11 @@ resolver_udns::enqueue_resolve(const char* name, int family, resolver_callback* 
     }
   }
 
-  // TODO: We should keep track of successfully started queries, not just malformed.
-  return query.release();
+  LT_LOG("enqueued query (name:%s family:%i ipv4:%s ipv6:%s)", hostname, family,
+         (query->a4_query != nullptr ? "yes" : "no"), (query->a6_query != nullptr ? "yes" : "no"));
+
+  m_queries.push_back(std::move(query));
+  return m_queries.back().get();
 }
 
 // Wraps the dns_timeouts function. it sends packets and can execute
@@ -184,6 +241,9 @@ resolver_udns::flush_resolves() {
   while (!m_malformed_queries.empty()) {
     query_ptr query = std::move(m_malformed_queries.back());
     m_malformed_queries.pop_back();
+
+    LT_LOG("flush malformed query (hostname:%s family:%i)", query->hostname.c_str(), query->family);
+
     (*(query->callback))(nullptr, query->error);
   }
 
@@ -193,13 +253,13 @@ resolver_udns::flush_resolves() {
 // TODO: Make adding queries automatically insert_read/etc. Do not flush when adding.
 
 void
-resolver_udns::cancel(void* query_v) {
-  auto query = static_cast<query_udns*>(query_v);
+resolver_udns::cancel(void* v_query) {
+  auto query = static_cast<query_udns*>(v_query);
 
   if (query == nullptr)
-    return;
+    return; // TODO: Throw instead.
 
-  // TODO: Verify found in list first.
+  LT_LOG("cancel query (hostname:%s family:%i)", query->hostname.c_str(), query->family);
 
   if (query->a4_query != nullptr)
     ::dns_cancel(m_ctx, query->a4_query);
@@ -207,10 +267,22 @@ resolver_udns::cancel(void* query_v) {
   if (query->a6_query != nullptr)
     ::dns_cancel(m_ctx, query->a6_query);
 
-  auto itr = std::find_if(m_malformed_queries.begin(), m_malformed_queries.end(), [query](query_ptr& q){ return q.get() == query; });
+  query_list_erase(m_queries, query);
+  query_list_erase(m_malformed_queries, query);
+}
 
-  if (itr != m_malformed_queries.end())
-    m_malformed_queries.erase(itr);
+resolver_udns::query_ptr
+resolver_udns::erase_query(query_udns* query) {
+  if (query == nullptr)
+    throw internal_error("resolver_udns::get_query query == nullptr");
+  if (query->resolver == nullptr)
+    throw internal_error("resolver_udns::get_query query->resolver == nullptr");
+
+  auto q_ptr = query_list_move(query->resolver->m_queries, query);
+
+  LT_LOG("erasing query (hostname:%s family:%i)", q_ptr->hostname.c_str(), q_ptr->family);
+  
+  return q_ptr;
 }
 
 void

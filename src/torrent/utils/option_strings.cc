@@ -202,6 +202,8 @@ const char* option_list_log_group[] = {
   "instrumentation_polling",
   "instrumentation_transfers",
 
+  "net_resolver",
+
   "peer_list_events",
 
   "protocol_piece_events",

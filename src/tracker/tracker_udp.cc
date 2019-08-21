@@ -106,6 +106,7 @@ TrackerUdp::send_state(int state) {
       AF_UNSPEC,
       &m_resolver_callback
   );
+  // TODO: Move to main thread loop.
   manager->connection_manager()->async_resolver().flush();
 }
 
