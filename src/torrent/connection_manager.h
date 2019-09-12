@@ -176,16 +176,11 @@ public:
   void                set_listen_port(port_type p)            { m_listen_port = p; }
   void                set_listen_backlog(int v);
 
-  // TODO: Not implemented.
-  void*               enqueue_async_resolve(const char *name, int family, resolver_callback *cbck);
-  void                flush_async_resolves();
-  void                cancel_async_resolve(void *query);
-
   // Legacy synchronous resolver interface.
   slot_resolver_type& resolver()          { return m_slot_resolver; }
 
   // Asynchronous resolver interface.
-  AsyncResolver&      async_resolver()    { return *m_async_resolver; }
+  AsyncResolver*      async_resolver()    { return m_async_resolver.get(); }
 
   // The slot returns a ThrottlePair to use for the given address, or
   // NULLs to use the default throttle.

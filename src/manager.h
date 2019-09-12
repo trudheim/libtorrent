@@ -94,6 +94,7 @@ public:
   void                cleanup_download(DownloadWrapper* d);
 
   void                receive_tick();
+  void                main_thread_events();
 
 private:
   DownloadManager*    m_downloadManager;
