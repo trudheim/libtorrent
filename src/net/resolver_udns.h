@@ -51,6 +51,12 @@ public:
   static void  complete_query(query_udns* query);
   static auto  erase_query(query_udns* query) -> resolver_udns::query_ptr;
 
+  // Get const query.
+
+  auto         queries() const -> const query_list_type&;
+  auto         completed_queries() const -> const query_list_type&;
+  auto         malformed_queries() const -> const query_list_type&;
+
 private:
   void         process_timeouts();
   bool         enqueue_numeric(const char* hostname, int family, query_ptr& query);
@@ -62,6 +68,10 @@ private:
   query_list_type    m_completed_queries;
   query_list_type    m_malformed_queries;
 };
+
+inline const resolver_udns::query_list_type& resolver_udns::queries() const { return m_queries; }
+inline const resolver_udns::query_list_type& resolver_udns::completed_queries() const { return m_completed_queries; }
+inline const resolver_udns::query_list_type& resolver_udns::malformed_queries() const { return m_malformed_queries; }
 
 }
 

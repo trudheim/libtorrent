@@ -183,6 +183,9 @@ void*
 resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callback* callback) {
   query_ptr query(new query_udns { hostname, family, 0, this, callback, nullptr, nullptr });
 
+  if (query->callback == nullptr)
+    throw internal_error("torrent::resolver::enqueue_resolve: query->callback == nullptr");
+
   // TODO: Before querying attempt to resolve numerichost, if either
   // inet/inet6 succeeds don't do anything more.
 
@@ -314,11 +317,11 @@ resolver_udns::process_timeouts() {
 
   if (timeout == -1) {
     // no pending queries
-    manager->poll()->remove_read(this);
-    manager->poll()->remove_error(this);
+    poll_event_remove_read(this);
+    poll_event_remove_error(this);
   } else {
-    manager->poll()->insert_read(this);
-    manager->poll()->insert_error(this);
+    poll_event_insert_read(this);
+    poll_event_insert_error(this);
     priority_queue_erase(&taskScheduler, &m_task_timeout);
     priority_queue_insert(&taskScheduler, &m_task_timeout, (cachedTime + rak::timer::from_seconds(timeout)).round_seconds());
   }

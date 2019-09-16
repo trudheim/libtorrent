@@ -44,6 +44,8 @@ LibTorrentTest_SOURCES = \
 	data/hash_queue_test.cc \
 	data/hash_queue_test.h \
 	\
+	net/test_resolver_udns.cc \
+	net/test_resolver_udns.h \
 	net/test_socket_listen.cc \
 	net/test_socket_listen.h \
 	\
