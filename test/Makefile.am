@@ -23,6 +23,7 @@ LibTorrentTest_SOURCES = \
 	helpers/mock_compare.h \
 	helpers/mock_function.cc \
 	helpers/mock_function.h \
+	helpers/mock_redirect.h \
 	helpers/network.h \
 	helpers/progress_listener.cc \
 	helpers/progress_listener.h \

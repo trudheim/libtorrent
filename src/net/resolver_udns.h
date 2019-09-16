@@ -53,6 +53,7 @@ public:
 
 private:
   void         process_timeouts();
+  bool         enqueue_numeric(const char* hostname, int family, query_ptr& query);
 
   ::dns_ctx*         m_ctx;
   rak::priority_item m_task_timeout;

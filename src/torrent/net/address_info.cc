@@ -7,7 +7,7 @@ namespace torrent {
 int
 ai_get_addrinfo(const char* nodename, const char* servname, const addrinfo* hints, ai_unique_ptr& res) {
   addrinfo* ai;
-  int err = ::getaddrinfo(nodename, servname, hints, &ai);
+  int err = ai__getaddrinfo(nodename, servname, hints, &ai);
 
   if (err != 0)
     return err;
@@ -27,7 +27,7 @@ ai_get_first_sa(const char* nodename, const char* servname, const addrinfo* hint
 }
 
 int
-ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda) {
+ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda, int flags) {
   int err;
   ai_unique_ptr ai;
 
@@ -38,6 +38,11 @@ ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda) {
 
   lambda(ai->ai_addr);
   return 0;
+}
+
+int
+ai__getaddrinfo(const char* nodename, const char* servname, const struct addrinfo* hints, struct addrinfo** res) {
+  return ::getaddrinfo(nodename, servname, hints, res);
 }
 
 }

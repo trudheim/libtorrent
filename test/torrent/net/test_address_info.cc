@@ -8,8 +8,16 @@
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_address_info, "torrent/net");
 
+#ifdef EAI_ADDRFAMILY
+#define LT_EAI_FAMILY EAI_ADDRFAMILY
+#else
+#define LT_EAI_FAMILY EAI_FAMILY
+#endif
+
 void
 test_address_info::test_basic() {
+  redirect_default_ai_getaddrinfo();
+
   CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet|aif_any> (std::bind(torrent::ai_get_addrinfo, "0.0.0.0", nullptr, nullptr, std::placeholders::_1)));
   CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet6|aif_any>(std::bind(torrent::ai_get_addrinfo, "::", nullptr, nullptr, std::placeholders::_1)));
 
@@ -28,9 +36,16 @@ test_address_info::test_basic() {
 
 void
 test_address_info::test_numericserv() {
+  redirect_default_ai_getaddrinfo();
+
   CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet> (std::bind(torrent::ai_get_addrinfo, "1.1.1.1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, 0, 0).get(), std::placeholders::_1)));
+  CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet> (std::bind(torrent::ai_get_addrinfo, "1.1.1.1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, PF_INET, 0).get(), std::placeholders::_1)));
+  CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet6>(std::bind(torrent::ai_get_addrinfo, "ff01::1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, 0, 0).get(), std::placeholders::_1)));
+  CPPUNIT_ASSERT(test_valid_ai_ref<aif_inet6>(std::bind(torrent::ai_get_addrinfo, "ff01::1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, PF_INET6, 0).get(), std::placeholders::_1)));
 
   CPPUNIT_ASSERT(test_valid_ai_ref_err(std::bind(torrent::ai_get_addrinfo, "localhost", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, 0, 0).get(), std::placeholders::_1), EAI_NONAME));
+  CPPUNIT_ASSERT(test_valid_ai_ref_err(std::bind(torrent::ai_get_addrinfo, "1.1.1.1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, PF_INET6, 0).get(), std::placeholders::_1), LT_EAI_FAMILY));
+  CPPUNIT_ASSERT(test_valid_ai_ref_err(std::bind(torrent::ai_get_addrinfo, "ff01::1", nullptr, torrent::ai_make_hint(AI_NUMERICHOST, PF_INET, 0).get(), std::placeholders::_1), LT_EAI_FAMILY));
 }
 
 void

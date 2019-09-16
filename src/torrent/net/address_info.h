@@ -24,13 +24,17 @@ inline ai_unique_ptr ai_make_hint(int flags, int family, int socktype);
 
 int ai_get_addrinfo(const char* nodename, const char* servname, const addrinfo* hints, ai_unique_ptr& res) LIBTORRENT_EXPORT;
 
+//
 // Helper functions:
+//
 
 // TODO: Consider servname "0".
 // TODO: ai_get_first_sa_err that returns a tuple?
-sa_unique_ptr ai_get_first_sa(const char* nodename, const char* servname = nullptr, const addrinfo* hints = nullptr) LIBTORRENT_EXPORT;
 
-int ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda) LIBTORRENT_EXPORT;
+sa_unique_ptr ai_get_first_sa(const char* nodename, const char* servname = nullptr, const addrinfo* hints = nullptr) LIBTORRENT_EXPORT;
+sa_unique_ptr ai__get_first_sa(const char* nodename, const char* servname = nullptr, const addrinfo* hints = nullptr) LIBTORRENT_EXPORT;
+
+int ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda, int flags = 0) LIBTORRENT_EXPORT;
 
 // Get all addrinfo's, iterate, etc.
 
@@ -42,6 +46,12 @@ inline void aip_clear(ai_unique_ptr& aip) { return ai_clear(aip.get()); }
 
 inline int aip_get_addrinfo(const char* nodename, const char* servname, const ai_unique_ptr& hints, ai_unique_ptr& res) { return ai_get_addrinfo(nodename, servname, hints.get(), res); }
 inline int aip_get_addrinfo(const char* nodename, const char* servname, const c_ai_unique_ptr& hints, ai_unique_ptr& res) { return ai_get_addrinfo(nodename, servname, hints.get(), res); }
+
+//
+// Mock function wrappers:
+//
+
+[[gnu::weak]] int  ai__getaddrinfo(const char* nodename, const char* servname, const struct addrinfo* hints, struct addrinfo** res) LIBTORRENT_EXPORT;
 
 //
 // Implementations:

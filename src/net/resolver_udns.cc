@@ -183,6 +183,9 @@ void*
 resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callback* callback) {
   query_ptr query(new query_udns { hostname, family, 0, this, callback, nullptr, nullptr });
 
+  // TODO: Before querying attempt to resolve numerichost, if either
+  // inet/inet6 succeeds don't do anything more.
+
   if (family == AF_INET || family == AF_UNSPEC) {
     query->a4_query = ::dns_submit_a4(m_ctx, hostname, 0, a4_callback_wrapper, query.get());
 
@@ -319,6 +322,11 @@ resolver_udns::process_timeouts() {
     priority_queue_erase(&taskScheduler, &m_task_timeout);
     priority_queue_insert(&taskScheduler, &m_task_timeout, (cachedTime + rak::timer::from_seconds(timeout)).round_seconds());
   }
+}
+
+bool
+resolver_udns::enqueue_numeric(const char* hostname, int family, query_ptr& query) {
+  return false;
 }
 
 }
