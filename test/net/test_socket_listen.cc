@@ -20,9 +20,9 @@ struct test_sl_deleter {
 typedef std::unique_ptr<torrent::socket_listen, test_sl_deleter> test_sl_unique_ptr;
 
 #define TEST_SL_BEGIN(name)                                     \
+  lt_log_print(torrent::LOG_MOCK_CALLS, "sl_begin: %s", name);  \
   test_sl_unique_ptr sl(new torrent::socket_listen);            \
   std::vector<torrent::sa_unique_ptr> sap_cache;                \
-  lt_log_print(torrent::LOG_MOCK_CALLS, "sl_begin: %s", name);  \
   TEST_DEFAULT_SA;
 
 #define TEST_SL_ASSERT_OPEN(_sap_bind, _sap_result, _flags)             \

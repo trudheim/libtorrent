@@ -94,9 +94,10 @@ a4_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a4 *result, void *data) {
     if (query->a6_query == nullptr) {
       auto query_ptr = resolver_udns::erase_query(query);
       (*(query_ptr->callback))(nullptr, udns_error_to_gaierror(::dns_status(ctx)));
+    } else {
+      // Return and wait to see if we get an a6 response.
     }
 
-    // Return and wait to see if we get an a6 response.
     return;
   }
   
@@ -122,9 +123,10 @@ a6_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a6 *result, void *data) {
     if (query->a4_query == nullptr) {
       auto query_ptr = resolver_udns::erase_query(query);
       (*(query_ptr->callback))(nullptr, udns_error_to_gaierror(::dns_status(ctx)));
+    } else {
+      // Return and wait to see if we get an a4 response.
     }
 
-    // Return and wait to see if we get an a4 response.
     return;
   }
 
@@ -162,8 +164,8 @@ resolver_udns::~resolver_udns() {
   priority_queue_erase(&taskScheduler, &m_task_timeout);
   ::dns_close(m_ctx);
   ::dns_free(m_ctx);
-  m_fileDesc = -1;
   m_ctx = nullptr;
+  m_fileDesc = -1;
 }
 
 void
@@ -201,12 +203,7 @@ resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callba
         throw internal_error("resolver_udns call to dns_submit_a4 failed with unrecoverable error");
 
       LT_LOG("malformed ipv4 query (hostname:%s family:%i)", hostname, family);
-
-      // this is what getaddrinfo(3) would return:
-      query->error = EAI_NONAME;
-
-      m_malformed_queries.push_back(std::move(query));
-      return m_malformed_queries.back().get();
+      return move_malformed_query(std::move(query), EAI_NONAME);
     }
   }
 
@@ -222,18 +219,15 @@ resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callba
         throw internal_error("resolver_udns call to dns_submit_a6 failed with unrecoverable error");
 
       LT_LOG("malformed ipv6 query (hostname:%s family:%i)", hostname, family);
-
-      query->error = EAI_NONAME;
-      m_malformed_queries.push_back(std::move(query));
-      return m_malformed_queries.back().get();
+      return move_malformed_query(std::move(query), EAI_NONAME);
     }
   }
 
   LT_LOG("enqueued query (name:%s family:%i ipv4:%s ipv6:%s)", hostname, family,
          (query->a4_query != nullptr ? "yes" : "no"), (query->a6_query != nullptr ? "yes" : "no"));
 
-  m_queries.push_back(std::move(query));
-  return m_queries.back().get();
+  m_pending_queries.push_back(std::move(query));
+  return m_pending_queries.back().get();
 }
 
 // Wraps the dns_timeouts function. it sends packets and can execute
@@ -287,14 +281,14 @@ resolver_udns::cancel(void* v_query) {
   if (query->a6_query != nullptr)
     ::dns_cancel(m_ctx, query->a6_query);
 
-  query_list_erase(m_queries, query);
+  query_list_erase(m_pending_queries, query);
   query_list_erase(m_malformed_queries, query);
 }
 
 void
 resolver_udns::complete_query(query_udns* query) {
   check_valid_query(query, "resolver_udns::complete_query");
-  auto q_ptr = query_list_move(query->resolver->m_queries, query);
+  auto q_ptr = query_list_move(query->resolver->m_pending_queries, query);
 
   LT_LOG("completing query (hostname:%s family:%i)", q_ptr->hostname.c_str(), q_ptr->family);
   
@@ -304,7 +298,7 @@ resolver_udns::complete_query(query_udns* query) {
 resolver_udns::query_ptr
 resolver_udns::erase_query(query_udns* query) {
   check_valid_query(query, "resolver_udns::erase_query");
-  auto q_ptr = query_list_move(query->resolver->m_queries, query);
+  auto q_ptr = query_list_move(query->resolver->m_pending_queries, query);
 
   LT_LOG("erasing query (hostname:%s family:%i)", q_ptr->hostname.c_str(), q_ptr->family);
   
@@ -327,9 +321,14 @@ resolver_udns::process_timeouts() {
   }
 }
 
-bool
-resolver_udns::enqueue_numeric(const char* hostname, int family, query_ptr& query) {
-  return false;
+query_udns*
+resolver_udns::move_malformed_query(query_ptr query, int error) {
+  if (has_pending_query(query) || has_completed_query(query) || has_malformed_query(query))
+    throw internal_error("resolver_udns::move_malformed_query: query already in a list");
+
+  query->error = error;
+  m_malformed_queries.push_back(std::move(query));
+  return m_malformed_queries.back().get();
 }
 
 }

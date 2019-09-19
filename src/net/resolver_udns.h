@@ -1,6 +1,7 @@
 #ifndef LIBTORRENT_NET_RESOLVER_UDNS_H
 #define LIBTORRENT_NET_RESOLVER_UDNS_H
 
+#include <algorithm>
 #include <cinttypes>
 #include <functional>
 #include <list>
@@ -19,6 +20,7 @@ namespace torrent {
 
 class resolver_udns;
 
+// 'error' is any EAI_* error.
 struct query_udns {
   std::string hostname;
   int family;
@@ -41,37 +43,70 @@ public:
   resolver_udns();
   ~resolver_udns();
 
-  void         event_read() override;
-  const char*  type_name() const override;
+  void     event_read() override;
+  auto     type_name() const -> const char* override;
 
-  void*        enqueue_resolve(const char* hostname, int family, resolver_callback* callback);
-  void         flush_resolves();
-  void         cancel(void* v_query);
+  void*    enqueue_resolve(const char* hostname, int family, resolver_callback* callback);
+  void     flush_resolves();
+  void     cancel(void* v_query);
 
-  static void  complete_query(query_udns* query);
-  static auto  erase_query(query_udns* query) -> resolver_udns::query_ptr;
+  auto     pending_queries() const -> const query_list_type&;
+  auto     completed_queries() const -> const query_list_type&;
+  auto     malformed_queries() const -> const query_list_type&;
 
-  // Get const query.
+  inline bool has_pending_query(const void* query) const;
+  inline bool has_completed_query(const void* query) const;
+  inline bool has_malformed_query(const void* query) const;
 
-  auto         queries() const -> const query_list_type&;
-  auto         completed_queries() const -> const query_list_type&;
-  auto         malformed_queries() const -> const query_list_type&;
+  inline bool has_pending_query(const query_ptr& query) const;
+  inline bool has_completed_query(const query_ptr& query) const;
+  inline bool has_malformed_query(const query_ptr& query) const;
+
+  static void complete_query(query_udns* query);
+  static auto erase_query(query_udns* query) -> resolver_udns::query_ptr;
 
 private:
-  void         process_timeouts();
-  bool         enqueue_numeric(const char* hostname, int family, query_ptr& query);
+  void     process_timeouts();
+  // Move to public.
+  bool     enqueue_numeric_query(const char* hostname, int family, query_ptr& query);
+  auto     move_malformed_query(query_ptr query, int error) -> query_udns*;
 
-  ::dns_ctx*         m_ctx;
   rak::priority_item m_task_timeout;
 
-  query_list_type    m_queries;
-  query_list_type    m_completed_queries;
-  query_list_type    m_malformed_queries;
+  ::dns_ctx*      m_ctx;
+  query_list_type m_pending_queries;
+  query_list_type m_completed_queries;
+  query_list_type m_malformed_queries;
 };
 
-inline const resolver_udns::query_list_type& resolver_udns::queries() const { return m_queries; }
+inline const resolver_udns::query_list_type& resolver_udns::pending_queries() const { return m_pending_queries; }
 inline const resolver_udns::query_list_type& resolver_udns::completed_queries() const { return m_completed_queries; }
 inline const resolver_udns::query_list_type& resolver_udns::malformed_queries() const { return m_malformed_queries; }
+
+inline bool
+resolver_udns::has_pending_query(const void* query) const {
+  return std::find_if(m_pending_queries.begin(), m_pending_queries.end(),
+                      [query](const resolver_udns::query_ptr& q){ return q.get() == static_cast<const query_udns*>(query); })
+    != m_pending_queries.end();
+}
+
+inline bool
+resolver_udns::has_completed_query(const void* query) const {
+  return std::find_if(m_completed_queries.begin(), m_completed_queries.end(),
+                      [query](const resolver_udns::query_ptr& q){ return q.get() == static_cast<const query_udns*>(query); })
+    != m_completed_queries.end();
+}
+
+inline bool
+resolver_udns::has_malformed_query(const void* query) const {
+  return std::find_if(m_malformed_queries.begin(), m_malformed_queries.end(),
+                      [query](const resolver_udns::query_ptr& q){ return q.get() == static_cast<const query_udns*>(query); })
+    != m_malformed_queries.end();
+}
+
+inline bool resolver_udns::has_pending_query(const query_ptr& query) const { return has_pending_query(query.get()); }
+inline bool resolver_udns::has_completed_query(const query_ptr& query) const { return has_completed_query(query.get()); }
+inline bool resolver_udns::has_malformed_query(const query_ptr& query) const { return has_malformed_query(query.get()); }
 
 }
 
