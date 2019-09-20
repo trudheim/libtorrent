@@ -6,10 +6,9 @@
 #include "helpers/expect_utils.h"
 #include "helpers/mock_function.h"
 #include "helpers/network.h"
-
-#include <net/socket_listen.h>
-#include <torrent/exceptions.h>
-#include <torrent/utils/log.h>
+#include "net/socket_listen.h"
+#include "torrent/exceptions.h"
+#include "torrent/utils/log.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_socket_listen, "net");
 

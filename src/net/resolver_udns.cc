@@ -211,11 +211,7 @@ resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callba
     query->a6_query = ::dns_submit_a6(m_ctx, hostname, 0, a6_callback_wrapper, query.get());
 
     if (query->a6_query == nullptr) {
-      // it should be impossible for dns_submit_a6 to fail if dns_submit_a4
-      // succeeded, but just in case, make it a hard failure:
-      //
-      // TODO: This depends on v4 being the default.
-      if (::dns_status(m_ctx) != DNS_E_BADQUERY || query->a4_query != nullptr)
+      if (::dns_status(m_ctx) != DNS_E_BADQUERY)
         throw internal_error("resolver_udns call to dns_submit_a6 failed with unrecoverable error");
 
       LT_LOG("malformed ipv6 query (hostname:%s family:%i)", hostname, family);
@@ -305,6 +301,27 @@ resolver_udns::erase_query(query_udns* query) {
   return q_ptr;
 }
 
+bool
+resolver_udns::enqueue_numeric_query(const char* hostname, int family, query_ptr& query) {
+  // ai_unique_ptr ai;
+
+  // if (ai_get_addrinfo(hostname, nullptr, ai_make_hint(AI_NUMERICHOST, family, 0).get(), ai) == -1)
+  //   return false;
+
+  // if (family == AF_INET || family == AF_UNSPEC)
+  //   ;
+}
+
+query_udns*
+resolver_udns::move_malformed_query(query_ptr query, int error) {
+  if (has_pending_query(query) || has_completed_query(query) || has_malformed_query(query))
+    throw internal_error("resolver_udns::move_malformed_query: query already in a list");
+
+  query->error = error;
+  m_malformed_queries.push_back(std::move(query));
+  return m_malformed_queries.back().get();
+}
+
 void
 resolver_udns::process_timeouts() {
   int timeout = ::dns_timeouts(m_ctx, -1, 0);
@@ -319,16 +336,6 @@ resolver_udns::process_timeouts() {
     priority_queue_erase(&taskScheduler, &m_task_timeout);
     priority_queue_insert(&taskScheduler, &m_task_timeout, (cachedTime + rak::timer::from_seconds(timeout)).round_seconds());
   }
-}
-
-query_udns*
-resolver_udns::move_malformed_query(query_ptr query, int error) {
-  if (has_pending_query(query) || has_completed_query(query) || has_malformed_query(query))
-    throw internal_error("resolver_udns::move_malformed_query: query already in a list");
-
-  query->error = error;
-  m_malformed_queries.push_back(std::move(query));
-  return m_malformed_queries.back().get();
 }
 
 }
