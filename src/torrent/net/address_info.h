@@ -19,11 +19,11 @@ typedef std::unique_ptr<addrinfo, ai_deleter> ai_unique_ptr;
 typedef std::unique_ptr<const addrinfo, ai_deleter> c_ai_unique_ptr;
 typedef std::function<void (const sockaddr*)> ai_sockaddr_func;
 
-inline void          ai_clear(addrinfo* ai);
-inline ai_unique_ptr ai_make_hint(int flags, int family, int socktype);
+void          ai_clear(addrinfo* ai);
+ai_unique_ptr ai_make(int flags = 0, int family = 0, int socktype = 0);
 
 int           ai_get_addrinfo(const char* nodename, const char* servname, const addrinfo* hints, ai_unique_ptr& res) LIBTORRENT_EXPORT;
-sa_unique_ptr ai_find_first_sa(const addrinfo& ai, int family = AF_UNSPEC, int socktype = 0) LIBTORRENT_EXPORT;
+sa_unique_ptr ai_find_first_sa(const addrinfo* ai, int family = AF_UNSPEC, int socktype = 0) LIBTORRENT_EXPORT;
 
 //
 // Helper functions:
@@ -43,6 +43,7 @@ int  ai_each_inet_inet6_first(const char* nodename, ai_sockaddr_func lambda, int
 inline void aip_clear(ai_unique_ptr& aip) { return ai_clear(aip.get()); }
 inline int  aip_get_addrinfo(const char* nodename, const char* servname, const ai_unique_ptr& hints, ai_unique_ptr& res) { return ai_get_addrinfo(nodename, servname, hints.get(), res); }
 inline int  aip_get_addrinfo(const char* nodename, const char* servname, const c_ai_unique_ptr& hints, ai_unique_ptr& res) { return ai_get_addrinfo(nodename, servname, hints.get(), res); }
+inline auto aip_find_first_sa(const ai_unique_ptr& aip, int family = AF_UNSPEC, int socktype = 0) -> sa_unique_ptr { return ai_find_first_sa(aip.get(), family, socktype); }
 
 //
 // Mock function wrappers:
@@ -60,7 +61,7 @@ ai_clear(addrinfo* ai) {
 }
 
 inline ai_unique_ptr
-ai_make_hint(int flags, int family, int socktype) {
+ai_make(int flags, int family, int socktype) {
   ai_unique_ptr aip(new addrinfo);
 
   aip_clear(aip);
