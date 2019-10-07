@@ -66,7 +66,7 @@ public:
   static auto erase_query(query_udns* query) -> resolver_udns::query_ptr;
 
 private:
-  bool     enqueue_numeric_query(const char* hostname, int family, query_ptr& query);
+  bool     resolve_numeric_query(query_ptr& query);
   auto     move_malformed_query(query_ptr query, int error) -> query_udns*;
   void     process_timeouts();
 

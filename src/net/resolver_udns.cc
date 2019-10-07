@@ -11,17 +11,15 @@
 
 #include "torrent/common.h"
 #include "torrent/poll.h"
+#include "torrent/net/address_info.h"
 #include "torrent/net/socket_address.h"
 #include "torrent/utils/log.h"
+
 #include "globals.h"
 #include "manager.h"
 
-#include "rak/socket_address.h"
-
 #define LT_LOG(log_fmt, ...)                                            \
   lt_log_print(LOG_NET_RESOLVER, "resolver: " log_fmt, __VA_ARGS__);
-#define LT_LOG_SOCKADDR(log_fmt, sa, ...)                               \
-  lt_log_print(LOG_NET_RESOLVER, "resolver->%s: " log_fmt, rak::socket_address::cast_from(sa)->pretty_address_str().c_str(), __VA_ARGS__);
 
 namespace torrent {
 namespace {
@@ -107,7 +105,7 @@ a4_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a4 *result, void *data) {
   }
 
   query->a4_result = sa_make_in_addr_t(result->dnsa4_addr[0].s_addr);
-  LT_LOG_SOCKADDR("a4 query successed (hostname:%s family:%i)", query->a4_result.get(), query->hostname.c_str(), query->a4_result->sa_family);
+  LT_LOG("a4 query successed (hostname:%s family:%i sa:%s)", query->hostname.c_str(), query->a4_result->sa_family, sap_pretty_str(query->a4_result).c_str());
   resolver_udns::complete_query(query);
 }
 
@@ -136,7 +134,7 @@ a6_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a6 *result, void *data) {
   }
 
   query->a6_result = sa_make_in6_addr(result->dnsa6_addr[0]);
-  LT_LOG_SOCKADDR("a6 query successed (hostname:%s family:%i)", query->a6_result.get(), query->hostname.c_str(), query->a6_result->sa_family);
+  LT_LOG("a6 query successed (hostname:%s family:%i sa:%s)", query->hostname.c_str(), query->a6_result->sa_family, sap_pretty_str(query->a6_result).c_str());
   resolver_udns::complete_query(query);
 }
 
@@ -188,8 +186,10 @@ resolver_udns::enqueue_resolve(const char* hostname, int family, resolver_callba
   if (query->callback == nullptr)
     throw internal_error("torrent::resolver::enqueue_resolve: query->callback == nullptr");
 
-  // TODO: Before querying attempt to resolve numerichost, if either
-  // inet/inet6 succeeds don't do anything more.
+  if (resolve_numeric_query(query)) {
+    m_completed_queries.push_back(std::move(query));
+    return m_completed_queries.back().get();
+  }
 
   if (family == AF_INET || family == AF_UNSPEC) {
     query->a4_query = ::dns_submit_a4(m_ctx, hostname, 0, a4_callback_wrapper, query.get());
@@ -302,14 +302,27 @@ resolver_udns::erase_query(query_udns* query) {
 }
 
 bool
-resolver_udns::enqueue_numeric_query(const char* hostname, int family, query_ptr& query) {
-  // ai_unique_ptr ai;
+resolver_udns::resolve_numeric_query(query_ptr& q_ptr) {
+  ai_unique_ptr aip;
 
-  // if (ai_get_addrinfo(hostname, nullptr, ai_make_hint(AI_NUMERICHOST, family, 0).get(), ai) == -1)
-  //   return false;
+  if (aip_get_addrinfo(q_ptr->hostname, nullptr, ai_make(AI_NUMERICHOST, q_ptr->family, 0), aip) != 0)
+    return false;
 
-  // if (family == AF_INET || family == AF_UNSPEC)
-  //   ;
+  sa_unique_ptr sap = aip_find_first_sa(aip);
+
+  LT_LOG("resolved numeric query (hostname:%s family:%i sa:%s)", q_ptr->hostname.c_str(), q_ptr->family, sap_pretty_str(sap).c_str());
+
+  if (sap == nullptr)
+    throw internal_error("resolver_udns::resolve_numeric_query: got nullptr");
+
+  if (sap->sa_family == AF_INET)
+    q_ptr->a4_result = std::move(sap);
+  else if (sap->sa_family == AF_INET6)
+    q_ptr->a6_result = std::move(sap);
+  else
+    throw internal_error("resolver_udns::resolve_numeric_query: resolved unexpected address family");
+
+  return true;
 }
 
 query_udns*
