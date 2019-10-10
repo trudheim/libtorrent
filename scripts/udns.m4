@@ -2,11 +2,11 @@ dnl function for enabling/disabling udns support
 AC_DEFUN([TORRENT_WITH_UDNS], [
   AC_ARG_WITH(
     [udns],
-    AS_HELP_STRING([--without-udns], [Don't use udns, falling back to synchronous DNS resolution.])
+    AS_HELP_STRING([--with-udns], [compile with udns support])
   )
 dnl neither ubuntu nor fedora ships a pkgconfig file for udns
   AS_IF(
-    [test "x$with_udns"  != "xno"],
+    [test "x$with_udns" = "xyes"],
     [AC_CHECK_HEADERS([udns.h], [have_udns=yes], [have_udns=no])],
     [have_udns=no]
   )
