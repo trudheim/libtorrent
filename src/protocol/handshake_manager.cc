@@ -1,39 +1,3 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
-
 #include "config.h"
 
 #include <rak/socket_address.h>
@@ -43,15 +7,10 @@
 
 #include "torrent/connection_manager.h"
 #include "torrent/download_info.h"
-#include "torrent/net/bind_manager.h"
-#include "torrent/net/fd.h"
 #include "torrent/peer/peer_info.h"
 #include "torrent/peer/client_list.h"
 #include "torrent/peer/connection_list.h"
 #include "torrent/utils/log.h"
-#include "torrent/utils/option_strings.h"
-
-#include "download/download_main.h"
 
 #include "peer_connection_base.h"
 #include "handshake.h"
@@ -76,20 +35,6 @@ handshake_manager_delete_handshake(Handshake* h) {
   h->destroy_connection();
 
   delete h;
-}
-
-inline const char*
-outgoing_encryption_options_to_string(int encryption_options) {
-  int value;
-
-  if (encryption_options & ConnectionManager::encryption_use_proxy)
-    value = ConnectionManager::handshake_outgoing_proxy;
-  else if (encryption_options & (ConnectionManager::encryption_try_outgoing | ConnectionManager::encryption_require))
-    value = ConnectionManager::handshake_outgoing_encrypted;
-  else
-    value = ConnectionManager::handshake_outgoing;
-
-  return option_to_string(OPTION_HANDSHAKE_CONNECTION, value);
 }
 
 HandshakeManager::size_type
@@ -134,25 +79,15 @@ HandshakeManager::erase_download(DownloadMain* info) {
 }
 
 void
-HandshakeManager::add_incoming(int c_fd, const sockaddr* c_sockaddr) {
-  SocketFd fd(c_fd);
-  rak::socket_address sa;
-  sa.copy_sockaddr(c_sockaddr);
-
+HandshakeManager::add_incoming(SocketFd fd, const rak::socket_address& sa) {
   if (!manager->connection_manager()->can_connect() ||
-      !manager->connection_manager()->filter(sa.c_sockaddr())) {
-    LT_LOG_SA(&sa, "incoming connection failed, out of resources or filtered (fd:%i)", fd.get_fd());
+      !manager->connection_manager()->filter(sa.c_sockaddr()) ||
+      !setup_socket(fd)) {
     fd.close();
     return;
   }
 
-  if (!setup_socket(fd)) {
-    LT_LOG_SA(&sa, "incoming connection failed, setup unsuccessful (fd:%i)", fd.get_fd());
-    fd.close();
-    return;
-  }
-
-  LT_LOG_SA(&sa, "incoming connection (fd:%i)", fd.get_fd());
+  LT_LOG_SA(&sa, "Adding incoming connection: fd:%i.", fd.get_fd());
 
   manager->connection_manager()->inc_socket_count();
 
@@ -172,10 +107,10 @@ HandshakeManager::add_outgoing(const rak::socket_address& sa, DownloadMain* down
 }
 
 void
-HandshakeManager::create_outgoing(const rak::socket_address& sa, DownloadMain* download, int encryption_options) {
+HandshakeManager::create_outgoing(const rak::socket_address& sa, DownloadMain* download, int encryptionOptions) {
   int connection_options = PeerList::connect_keep_handshakes;
 
-  if (!(encryption_options & ConnectionManager::encryption_retrying))
+  if (!(encryptionOptions & ConnectionManager::encryption_retrying))
     connection_options |= PeerList::connect_filter_recent;
 
   PeerInfo* peerInfo = download->peer_list()->connected(sa.c_sockaddr(), connection_options);
@@ -183,33 +118,40 @@ HandshakeManager::create_outgoing(const rak::socket_address& sa, DownloadMain* d
   if (peerInfo == NULL || peerInfo->failed_counter() > max_failed)
     return;
 
-  const rak::socket_address* connect_addr = &sa;
+  SocketFd fd;
+  const rak::socket_address* bindAddress = rak::socket_address::cast_from(manager->connection_manager()->bind_address());
+  const rak::socket_address* connectAddress = &sa;
 
   if (rak::socket_address::cast_from(manager->connection_manager()->proxy_address())->is_valid()) {
-    connect_addr = rak::socket_address::cast_from(manager->connection_manager()->proxy_address());
-    encryption_options |= ConnectionManager::encryption_use_proxy;
+    connectAddress = rak::socket_address::cast_from(manager->connection_manager()->proxy_address());
+    encryptionOptions |= ConnectionManager::encryption_use_proxy;
   }
 
-  int file_desc = manager->bind()->connect_socket(connect_addr->c_sockaddr(), 0);
+  if (!fd.open_stream() ||
+      !setup_socket(fd) ||
+      (bindAddress->is_bindable() && !fd.bind(*bindAddress)) ||
+      !fd.connect(*connectAddress)) {
 
-  if (file_desc == -1) {
-    LT_LOG_SA(&sa, "outgoing connection could not open socket", 0);
+    if (fd.is_valid())
+      fd.close();
 
     download->peer_list()->disconnected(peerInfo, 0);
     return;
   }
 
-  if (!HandshakeManager::setup_socket(SocketFd(file_desc))) {
-    fd_close(file_desc);
-    return;
-  }
+  int message;
 
-  LT_LOG_SA(&sa, "outgoing connection (fd:%i encryption:0x%x type:%s)",
-            file_desc, encryption_options, outgoing_encryption_options_to_string(encryption_options));
+  if (encryptionOptions & ConnectionManager::encryption_use_proxy)
+    message = ConnectionManager::handshake_outgoing_proxy;
+  else if (encryptionOptions & (ConnectionManager::encryption_try_outgoing | ConnectionManager::encryption_require))
+    message = ConnectionManager::handshake_outgoing_encrypted;
+  else
+    message = ConnectionManager::handshake_outgoing;
 
+  LT_LOG_SA(&sa, "Adding outcoming connection: encryption:%x message:%x.", encryptionOptions, message);
   manager->connection_manager()->inc_socket_count();
 
-  Handshake* handshake = new Handshake(SocketFd(file_desc), this, encryption_options);
+  Handshake* handshake = new Handshake(fd, this, encryptionOptions);
   handshake->initialize_outgoing(sa, download, peerInfo);
 
   base_type::push_back(handshake);
@@ -236,7 +178,7 @@ HandshakeManager::receive_succeeded(Handshake* handshake) {
                                                  handshake->extensions())) != NULL) {
     
     manager->client_list()->retrieve_id(&handshake->peer_info()->mutable_client_info(), handshake->peer_info()->id());
-    LT_LOG_SA_C(handshake->peer_info()->socket_address(), "handshake success", 0);
+    LT_LOG_SA_C(handshake->peer_info()->socket_address(), "Handshake success.", 0);
 
     pcb->peer_chunks()->set_have_timer(handshake->initialized_time());
 
@@ -260,7 +202,7 @@ HandshakeManager::receive_succeeded(Handshake* handshake) {
     else
       reason = e_handshake_duplicate;
 
-    LT_LOG_SA_C(handshake->peer_info()->socket_address(), "handshake dropped (value:%i message:'%s')", reason, strerror(reason));
+    LT_LOG_SA_C(handshake->peer_info()->socket_address(), "Handshake dropped: %s.", strerror(reason));
     handshake->destroy_connection();
   }
 
@@ -278,13 +220,14 @@ HandshakeManager::receive_failed(Handshake* handshake, int message, int error) {
   handshake->deactivate_connection();
   handshake->destroy_connection();
 
-  LT_LOG_SA(sa, "received error (value:%i message:'%s')", message, strerror(error));
+  LT_LOG_SA(sa, "Received error: message:%x %s.", message, strerror(error));
 
   if (handshake->encryption()->should_retry()) {
     int retry_options = handshake->retry_options() | ConnectionManager::encryption_retrying;
     DownloadMain* download = handshake->download();
 
-    LT_LOG_SA(sa, "retrying (%s)", retry_options & ConnectionManager::encryption_try_outgoing ? "encrypted" : "plaintext");
+    LT_LOG_SA(sa, "Retrying %s.",
+              retry_options & ConnectionManager::encryption_try_outgoing ? "encrypted" : "plaintext");
 
     create_outgoing(*sa, download, retry_options);
   }
@@ -302,15 +245,13 @@ HandshakeManager::receive_timeout(Handshake* h) {
 
 bool
 HandshakeManager::setup_socket(SocketFd fd) {
-  // Called twice on outgoing connections.
   if (!fd.set_nonblock())
     return false;
 
   ConnectionManager* m = manager->connection_manager();
 
-  // TODO: Needs to be changed to support inet/inet6.
-  // if (m->priority() != ConnectionManager::iptos_default && !fd.set_priority(m->priority()))
-  //   return false;
+  if (m->priority() != ConnectionManager::iptos_default && !fd.set_priority(m->priority()))
+    return false;
 
   if (m->send_buffer_size() != 0 && !fd.set_send_buffer_size(m->send_buffer_size()))
     return false;
