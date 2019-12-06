@@ -12,7 +12,6 @@
 
 #ifdef USE_UDNS
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_resolver_udns, "net");
-#endif
 
 #define TEST_RESOLVER_INIT(name)                                \
   lt_log_print(torrent::LOG_MOCK_CALLS, "ru_begin: %s", name);  \
@@ -106,6 +105,8 @@ test_resolver_udns::enqueue_resolve_error() {
     CPPUNIT_ASSERT_THROW(resolver.enqueue_resolve("localhost", 66666, nullptr), torrent::internal_error);
   };
 }
+
+#endif // USE_UDNS
 
 // completed
 

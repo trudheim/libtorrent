@@ -98,7 +98,7 @@ a4_callback_wrapper(struct ::dns_ctx *ctx, ::dns_rr_a4 *result, void *data) {
 
     return;
   }
-  
+
   if (query->a6_query != nullptr) {
     ::dns_cancel(ctx, query->a6_query);
     query->a6_query = nullptr;
@@ -287,7 +287,7 @@ resolver_udns::complete_query(query_udns* query) {
   auto q_ptr = query_list_move(query->resolver->m_pending_queries, query);
 
   LT_LOG("completing query (hostname:%s family:%i)", q_ptr->hostname.c_str(), q_ptr->family);
-  
+
   query->resolver->m_completed_queries.push_back(std::move(q_ptr));
 }
 
@@ -297,7 +297,7 @@ resolver_udns::erase_query(query_udns* query) {
   auto q_ptr = query_list_move(query->resolver->m_pending_queries, query);
 
   LT_LOG("erasing query (hostname:%s family:%i)", q_ptr->hostname.c_str(), q_ptr->family);
-  
+
   return q_ptr;
 }
 
