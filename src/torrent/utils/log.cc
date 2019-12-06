@@ -16,6 +16,8 @@
 #include <functional>
 #include <memory>
 
+#define GROUPFMT (group >= LOG_NON_CASCADING) ? ("%" PRIi32 " ") : ("%" PRIi32 " %c ")
+
 namespace torrent {
 
 struct log_cache_entry {
@@ -32,7 +34,7 @@ struct log_cache_entry {
 };
 
 struct log_gz_output {
-  log_gz_output(const char* filename) { gz_file = gzopen(filename, "w"); }
+  log_gz_output(const char* filename, bool append) { gz_file = gzopen(filename, append ? "a" : "w"); }
   ~log_gz_output() { if (gz_file != NULL) gzclose(gz_file); }
 
   bool is_valid() { return gz_file != Z_NULL; }
@@ -356,9 +358,7 @@ log_gz_file_write(std::shared_ptr<log_gz_output>& outfile, const char* data, siz
 
   // Normal groups are nul-terminated strings.
   if (group >= 0) {
-    const char* fmt = (group >= LOG_NON_CASCADING) ? ("%" PRIi32 " ") : ("%" PRIi32 " %c ");
-
-    int buffer_length = snprintf(buffer, 64, fmt,
+    int buffer_length = snprintf(buffer, 64, GROUPFMT,
                                  cachedTime.seconds(),
                                  log_level_char[group % 6]);
     
@@ -379,8 +379,11 @@ log_gz_file_write(std::shared_ptr<log_gz_output>& outfile, const char* data, siz
 }
 
 void
-log_open_file_output(const char* name, const char* filename) {
-  std::shared_ptr<std::ofstream> outfile(new std::ofstream(filename));
+log_open_file_output(const char* name, const char* filename, bool append) {
+  std::ios_base::openmode mode = std::ofstream::out;
+  if (append)
+    mode |= std::ofstream::app;
+  std::shared_ptr<std::ofstream> outfile(new std::ofstream(filename, mode));
 
   if (!outfile->good())
     throw input_error("Could not open log file '" + std::string(filename) + "'.");
@@ -392,8 +395,8 @@ log_open_file_output(const char* name, const char* filename) {
 }
 
 void
-log_open_gz_file_output(const char* name, const char* filename) {
-  std::shared_ptr<log_gz_output> outfile(new log_gz_output(filename));
+log_open_gz_file_output(const char* name, const char* filename, bool append) {
+  std::shared_ptr<log_gz_output> outfile(new log_gz_output(filename, append));
 
   if (!outfile->is_valid())
     throw input_error("Could not open log gzip file '" + std::string(filename) + "'.");
