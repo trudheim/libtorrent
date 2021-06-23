@@ -65,6 +65,10 @@ LibTorrent_Test_Torrent_Utils_SOURCES = $(LibTorrent_Test_Common) \
 LibTorrent_Test_Torrent_SOURCES = $(LibTorrent_Test_Common) \
 	torrent/test_http.cc \
 	torrent/test_http.h \
+	torrent/test_tracker_controller.cc \
+	torrent/test_tracker_controller.h \
+	torrent/test_tracker_list.cc \
+	torrent/test_tracker_list.h \
 	\
 	torrent/object_test.cc \
 	torrent/object_test.h \
@@ -74,14 +78,10 @@ LibTorrent_Test_Torrent_SOURCES = $(LibTorrent_Test_Common) \
 	torrent/object_static_map_test.h \
 	torrent/object_stream_test.cc \
 	torrent/object_stream_test.h \
-	torrent/tracker_controller_test.cc \
-	torrent/tracker_controller_test.h \
 	torrent/tracker_controller_features.cc \
 	torrent/tracker_controller_features.h \
 	torrent/tracker_controller_requesting.cc \
 	torrent/tracker_controller_requesting.h \
-	torrent/tracker_list_test.cc \
-	torrent/tracker_list_test.h \
 	torrent/tracker_list_features_test.cc \
 	torrent/tracker_list_features_test.h \
 	torrent/tracker_timeout_test.cc \

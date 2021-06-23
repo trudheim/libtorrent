@@ -45,7 +45,6 @@ DownloadWrapper::DownloadWrapper() :
   m_main->delay_partially_restarted().slot() = std::bind(&download_data::call_partially_restarted, data());
 
   m_main->peer_list()->set_info(info());
-  m_main->tracker_list()->set_info(info());
   m_main->tracker_controller()->slot_success() = std::bind(&DownloadWrapper::receive_tracker_success, this, std::placeholders::_1);
   m_main->tracker_controller()->slot_failure() = std::bind(&DownloadWrapper::receive_tracker_failed, this, std::placeholders::_1);
 

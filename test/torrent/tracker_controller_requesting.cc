@@ -6,7 +6,7 @@
 #include "rak/priority_queue_default.h"
 
 #include "globals.h"
-#include "tracker_list_test.h"
+#include "test_tracker_list.h"
 #include "tracker_controller_requesting.h"
 
 CPPUNIT_TEST_SUITE_REGISTRATION(tracker_controller_requesting);

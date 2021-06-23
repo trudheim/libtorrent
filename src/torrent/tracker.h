@@ -1,13 +1,15 @@
 #ifndef LIBTORRENT_TRACKER_H
 #define LIBTORRENT_TRACKER_H
 
-#include <string>
-#include <cinttypes>
-#include <torrent/common.h>
+#import <functional>
+#import <string>
+#import <cinttypes>
+#import <torrent/common.h>
 
 namespace torrent {
 
 class AddressList;
+class DownloadInfo;
 class TrackerList;
 
 class LIBTORRENT_EXPORT Tracker {
@@ -96,7 +98,7 @@ public:
   static std::string  scrape_url_from(std::string url);
 
 protected:
-  Tracker(TrackerList* parent, const std::string& url, int flags = 0);
+  Tracker(DownloadInfo* info, const std::string& url, int flags = 0);
   Tracker(const Tracker& t);
   void operator = (const Tracker& t);
 
@@ -116,6 +118,7 @@ protected:
   void                set_min_interval(int v)               { m_min_interval = std::min(std::max(300, v), 4 * 3600); }
 
   int                 m_flags;
+  DownloadInfo*       m_info;
 
   TrackerList*        m_parent;
   uint32_t            m_group;
@@ -147,6 +150,44 @@ protected:
   // there's been in the recent past.
   uint32_t            m_request_time_last;
   uint32_t            m_request_counter;
+
+public:
+  // auto slot_success() -> &std::function<void (AddressList* l)>         { return m_slot_success; }
+  // auto slot_failure() -> &std::function<void (const std::string& msg)> { return m_slot_failure; }
+  // auto slot_scrape_success() -> &std::function<void ()>                       { return m_slot_scrape_success; }
+  // auto slot_scrape_failure() -> &std::function<void (const std::string& msg)> { return m_slot_scrape_failure; }
+  // auto slot_tracker_enabled() -> &std::function<void ()>               { return m_slot_tracker_enabled; }
+  // auto slot_tracker_disabled() -> &std::function<void ()>              { return m_slot_tracker_disabled; }
+  // auto slot_key() -> &std::function<uint32_t ()>                       { return m_slot_key; }
+  // auto slot_numwant() -> &std::function<int32_t ()>                    { return m_slot_numwant; }
+
+  // auto slot_success() -> std::function<void (AddressList* l)>&         { return m_slot_success; }
+  // auto slot_failure() -> std::function<void (const std::string& msg)>& { return m_slot_failure; }
+  // auto slot_scrape_success() -> std::function<void ()>&                       { return m_slot_scrape_success; }
+  // auto slot_scrape_failure() -> std::function<void (const std::string& msg)>& { return m_slot_scrape_failure; }
+  // auto slot_tracker_enabled() -> std::function<void ()>&               { return m_slot_tracker_enabled; }
+  // auto slot_tracker_disabled() -> std::function<void ()>&              { return m_slot_tracker_disabled; }
+  // auto slot_key() -> std::function<uint32_t ()>&                       { return m_slot_key; }
+  // auto slot_numwant() -> std::function<int32_t ()>&                    { return m_slot_numwant; }
+
+  auto& slot_success()          { return m_slot_success; }
+  auto& slot_failure()          { return m_slot_failure; }
+  auto& slot_scrape_success()   { return m_slot_scrape_success; }
+  auto& slot_scrape_failure()   { return m_slot_scrape_failure; }
+  auto& slot_tracker_enabled()  { return m_slot_tracker_enabled; }
+  auto& slot_tracker_disabled() { return m_slot_tracker_disabled; }
+  auto& slot_key()              { return m_slot_key; }
+  auto& slot_numwant()          { return m_slot_numwant; }
+
+protected:
+  std::function<void (AddressList* l)>         m_slot_success;
+  std::function<void (const std::string& msg)> m_slot_failure;
+  std::function<void ()>                       m_slot_scrape_success;
+  std::function<void (const std::string& msg)> m_slot_scrape_failure;
+  std::function<void ()>                       m_slot_tracker_enabled;
+  std::function<void ()>                       m_slot_tracker_disabled;
+  std::function<uint32_t ()>                   m_slot_key;
+  std::function<int32_t ()>                    m_slot_numwant;
 };
 
 inline bool

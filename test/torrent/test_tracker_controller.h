@@ -2,8 +2,8 @@
 
 #include "torrent/tracker_controller.h"
 
-class tracker_controller_test : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(tracker_controller_test);
+class test_tracker_controller : public CppUnit::TestFixture {
+  CPPUNIT_TEST_SUITE(test_tracker_controller);
 
   CPPUNIT_TEST(test_basic);
   CPPUNIT_TEST(test_enable);

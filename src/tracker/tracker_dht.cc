@@ -58,8 +58,8 @@ const char* TrackerDht::states[] = { "Idle", "Searching", "Announcing" };
 
 bool TrackerDht::is_allowed() { return manager->dht_manager()->is_valid(); }
 
-TrackerDht::TrackerDht(TrackerList* parent, const std::string& url, int flags) :
-  Tracker(parent, url, flags),
+TrackerDht::TrackerDht(DownloadInfo* info, const std::string& url, int flags) :
+  Tracker(info, url, flags),
   m_state(state_idle) {
 
   if (!manager->dht_manager()->is_valid())
@@ -83,11 +83,8 @@ TrackerDht::is_usable() const {
 
 void
 TrackerDht::send_state(int state) {
-  if (m_parent == NULL)
-    throw internal_error("TrackerDht::send_state(...) does not have a valid m_parent.");
-
   if (is_busy()) {
-    manager->dht_manager()->router()->cancel_announce(m_parent->info(), this);
+    manager->dht_manager()->router()->cancel_announce(m_info, this);
 
     if (is_busy())
       throw internal_error("TrackerDht::send_state cancel_announce did not cancel announce.");
@@ -103,7 +100,7 @@ TrackerDht::send_state(int state) {
   if (!manager->dht_manager()->is_active())
     return receive_failed("DHT server not active.");
 
-  manager->dht_manager()->router()->announce(m_parent->info(), this);
+  manager->dht_manager()->router()->announce(m_info, this);
 
   set_normal_interval(20 * 60);
   set_min_interval(0);
@@ -112,7 +109,7 @@ TrackerDht::send_state(int state) {
 void
 TrackerDht::close() {
   if (is_busy())
-    manager->dht_manager()->router()->cancel_announce(m_parent->info(), this);
+    manager->dht_manager()->router()->cancel_announce(m_info, this);
 }
 
 void
@@ -139,7 +136,7 @@ TrackerDht::receive_success() {
     throw internal_error("TrackerDht::receive_success called while not busy.");
 
   m_state = state_idle;
-  m_parent->receive_success(this, &m_peers);
+  m_slot_success(&m_peers);
   m_peers.clear();
 }
 
@@ -149,7 +146,7 @@ TrackerDht::receive_failed(const char* msg) {
     throw internal_error("TrackerDht::receive_failed called while not busy.");
 
   m_state = state_idle;
-  m_parent->receive_failed(this, msg);
+  m_slot_failure(msg);
   m_peers.clear();
 }
 

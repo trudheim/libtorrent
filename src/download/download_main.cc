@@ -66,7 +66,7 @@ DownloadMain::DownloadMain() :
   m_uploadThrottle(NULL),
   m_downloadThrottle(NULL) {
 
-  m_tracker_list = new TrackerList();
+  m_tracker_list = new TrackerList(m_info);
   m_tracker_controller = new TrackerController(m_tracker_list);
 
   m_tracker_list->slot_success() = std::bind(&TrackerController::receive_success, m_tracker_controller, std::placeholders::_1, std::placeholders::_2);

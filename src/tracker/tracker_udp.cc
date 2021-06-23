@@ -1,39 +1,3 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
-
 #include "config.h"
 
 #define __STDC_FORMAT_MACROS
@@ -58,15 +22,15 @@
 #include "manager.h"
 
 #define LT_LOG_TRACKER(log_level, log_fmt, ...)                         \
-  lt_log_print_info(LOG_TRACKER_##log_level, m_parent->info(), "tracker_udp", "[%u] " log_fmt, group(), __VA_ARGS__);
+  lt_log_print_info(LOG_TRACKER_##log_level, m_info, "tracker_udp", "[%u] " log_fmt, group(), __VA_ARGS__);
 
 #define LT_LOG_TRACKER_DUMP(log_level, log_dump_data, log_dump_size, log_fmt, ...)                   \
-  lt_log_print_info_dump(LOG_TRACKER_##log_level, log_dump_data, log_dump_size, m_parent->info(), "tracker_udp", "[%u] " log_fmt, group(), __VA_ARGS__);
+  lt_log_print_info_dump(LOG_TRACKER_##log_level, log_dump_data, log_dump_size, m_info, "tracker_udp", "[%u] " log_fmt, group(), __VA_ARGS__);
 
 namespace torrent {
 
-TrackerUdp::TrackerUdp(TrackerList* parent, const std::string& url, int flags) :
-  Tracker(parent, url, flags),
+TrackerUdp::TrackerUdp(DownloadInfo* info, const std::string& url, int flags) :
+  Tracker(info, url, flags),
 
   m_port(0),
 
@@ -174,8 +138,8 @@ TrackerUdp::start_announce(const sockaddr* sa, int err) {
   manager->poll()->insert_write(this);
   manager->poll()->insert_error(this);
 
-  m_tries = m_parent->info()->udp_tries();
-  priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_parent->info()->udp_timeout())).round_seconds());
+  m_tries = m_info->udp_tries();
+  priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_info->udp_timeout())).round_seconds());
 }
 
 void
@@ -230,7 +194,7 @@ TrackerUdp::type() const {
 void
 TrackerUdp::receive_failed(const std::string& msg) {
   close_directly();
-  m_parent->receive_failed(this, msg);
+  m_slot_failure(msg);
 }
 
 void
@@ -241,7 +205,7 @@ TrackerUdp::receive_timeout() {
   if (--m_tries == 0) {
     receive_failed("unable to connect to UDP tracker");
   } else {
-    priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_parent->info()->udp_timeout())).round_seconds());
+    priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_info->udp_timeout())).round_seconds());
 
     manager->poll()->insert_write(this);
   }
@@ -275,9 +239,9 @@ TrackerUdp::event_read() {
     prepare_announce_input();
 
     priority_queue_erase(&taskScheduler, &m_taskTimeout);
-    priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_parent->info()->udp_timeout())).round_seconds());
+    priority_queue_insert(&taskScheduler, &m_taskTimeout, (cachedTime + rak::timer::from_seconds(m_info->udp_timeout())).round_seconds());
 
-    m_tries = m_parent->info()->udp_tries();
+    m_tries = m_info->udp_tries();
     manager->poll()->insert_write(this);
     return;
 
@@ -325,20 +289,18 @@ TrackerUdp::prepare_connect_input() {
 
 void
 TrackerUdp::prepare_announce_input() {
-  DownloadInfo* info = m_parent->info();
-
   m_writeBuffer->reset();
 
   m_writeBuffer->write_64(m_connectionId);
   m_writeBuffer->write_32(m_action = 1);
   m_writeBuffer->write_32(m_transactionId = random());
 
-  m_writeBuffer->write_range(info->hash().begin(), info->hash().end());
-  m_writeBuffer->write_range(info->local_id().begin(), info->local_id().end());
+  m_writeBuffer->write_range(m_info->hash().begin(), m_info->hash().end());
+  m_writeBuffer->write_range(m_info->local_id().begin(), m_info->local_id().end());
 
-  uint64_t uploaded_adjusted = info->uploaded_adjusted();
-  uint64_t completed_adjusted = info->completed_adjusted();
-  uint64_t download_left = info->slot_left()();
+  uint64_t uploaded_adjusted = m_info->uploaded_adjusted();
+  uint64_t completed_adjusted = m_info->completed_adjusted();
+  uint64_t download_left = m_info->slot_left()();
 
   m_writeBuffer->write_64(completed_adjusted);
   m_writeBuffer->write_64(download_left);
@@ -353,8 +315,8 @@ TrackerUdp::prepare_announce_input() {
     local_addr = localAddress->sa_inet()->address_n();
 
   m_writeBuffer->write_32_n(local_addr);
-  m_writeBuffer->write_32(m_parent->key());
-  m_writeBuffer->write_32(m_parent->numwant());
+  m_writeBuffer->write_32(m_slot_key());
+  m_writeBuffer->write_32(m_slot_numwant());
   m_writeBuffer->write_16(manager->connection_manager()->listen_port());
 
   if (m_writeBuffer->size_end() != 98)
@@ -398,7 +360,7 @@ TrackerUdp::process_announce_output() {
   // Some logic here to decided on whetever we're going to close the
   // connection or not?
   close_directly();
-  m_parent->receive_success(this, &l);
+  m_slot_success(&l);
 
   return true;
 }

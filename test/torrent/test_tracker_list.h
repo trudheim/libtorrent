@@ -3,8 +3,8 @@
 #include <rak/timer.h>
 #include <cppunit/extensions/HelperMacros.h>
 
-class tracker_list_test : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(tracker_list_test);
+class test_tracker_list : public CppUnit::TestFixture {
+  CPPUNIT_TEST_SUITE(test_tracker_list);
   CPPUNIT_TEST(test_basic);
   CPPUNIT_TEST(test_enable);
   CPPUNIT_TEST(test_close);

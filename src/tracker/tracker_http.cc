@@ -25,15 +25,15 @@
 #import "manager.h"
 
 #define LT_LOG_TRACKER(log_level, log_fmt, ...)                         \
-  lt_log_print_info(LOG_TRACKER_##log_level, m_parent->info(), "tracker", "[%u] " log_fmt, group(), __VA_ARGS__);
+  lt_log_print_info(LOG_TRACKER_##log_level, m_info, "tracker", "[%u] " log_fmt, group(), __VA_ARGS__);
 
 #define LT_LOG_TRACKER_DUMP(log_level, log_dump_data, log_dump_size, log_fmt, ...)                   \
-  lt_log_print_info_dump(LOG_TRACKER_##log_level, log_dump_data, log_dump_size, m_parent->info(), "tracker", "[%u] " log_fmt, group(), __VA_ARGS__);
+  lt_log_print_info_dump(LOG_TRACKER_##log_level, log_dump_data, log_dump_size, m_info, "tracker", "[%u] " log_fmt, group(), __VA_ARGS__);
 
 namespace torrent {
 
-TrackerHttp::TrackerHttp(TrackerList* parent, const std::string& url, int flags) :
-  Tracker(parent, url, flags),
+TrackerHttp::TrackerHttp(DownloadInfo* info, const std::string& url, int flags) :
+  Tracker(info, url, flags),
 
   m_get(Http::slot_factory()()),
   m_data(NULL) {
@@ -70,8 +70,8 @@ void
 TrackerHttp::request_prefix(std::stringstream* stream, const std::string& url) {
   char hash[61];
 
-  *rak::copy_escape_html(m_parent->info()->hash().begin(),
-                         m_parent->info()->hash().end(), hash) = '\0';
+  *rak::copy_escape_html(m_info->hash().begin(),
+                         m_info->hash().end(), hash) = '\0';
   *stream << url
           << (m_dropDeliminator ? '&' : '?')
           << "info_hash=" << hash;
@@ -81,9 +81,6 @@ void
 TrackerHttp::send_state(int state) {
   close_directly();
 
-  if (m_parent == NULL)
-    throw internal_error("TrackerHttp::send_state(...) does not have a valid m_parent.");
-
   m_latest_event = state;
 
   std::stringstream s;
@@ -91,7 +88,7 @@ TrackerHttp::send_state(int state) {
 
   char localId[61];
 
-  DownloadInfo* info = m_parent->info();
+  DownloadInfo* info = m_info;
 
   request_prefix(&s, m_url);
 
@@ -99,8 +96,8 @@ TrackerHttp::send_state(int state) {
 
   s << "&peer_id=" << localId;
 
-  if (m_parent->key())
-    s << "&key=" << std::hex << std::setw(8) << std::setfill('0') << m_parent->key() << std::dec;
+  if (m_slot_key())
+    s << "&key=" << std::hex << std::setw(8) << std::setfill('0') << m_slot_key() << std::dec;
 
   if (!m_tracker_id.empty())
     s << "&trackerid=" << rak::copy_escape_html(m_tracker_id);
@@ -122,8 +119,8 @@ TrackerHttp::send_state(int state) {
   if (info->is_compact())
     s << "&compact=1";
 
-  if (m_parent->numwant() >= 0 && state != DownloadInfo::STOPPED)
-    s << "&numwant=" << m_parent->numwant();
+  if (m_slot_numwant() >= 0 && state != DownloadInfo::STOPPED)
+    s << "&numwant=" << m_slot_numwant();
 
   if (manager->connection_manager()->listen_port())
     s << "&port=" << manager->connection_manager()->listen_port();
@@ -280,10 +277,12 @@ TrackerHttp::receive_failed(std::string msg) {
 
   close_directly();
 
-  if (m_latest_event == EVENT_SCRAPE)
-    m_parent->receive_scrape_failed(this, msg);
-  else
-    m_parent->receive_failed(this, msg);
+  if (m_latest_event == EVENT_SCRAPE) {
+    m_slot_scrape_failure(msg);
+    return;
+  }
+
+  m_slot_failure(msg);
 }
 
 void
@@ -330,7 +329,7 @@ TrackerHttp::process_success(const Object& object) {
     l.parse_address_compact_ipv6(object.get_key_string("peers6"));
 
   close_directly();
-  m_parent->receive_success(this, &l);
+  m_slot_success(&l);
 }
 
 void
@@ -341,10 +340,10 @@ TrackerHttp::process_scrape(const Object& object) {
   // Add better validation here...
   const Object& files = object.get_key("files");
 
-  if (!files.has_key_map(m_parent->info()->hash().str()))
+  if (!files.has_key_map(m_info->hash().str()))
     return receive_failed("Tracker scrape replay did not contain infohash.");
 
-  const Object& stats = files.get_key(m_parent->info()->hash().str());
+  const Object& stats = files.get_key(m_info->hash().str());
 
   if (stats.has_key_value("complete"))
     m_scrape_complete = std::max<int64_t>(stats.get_key_value("complete"), 0);
@@ -359,7 +358,7 @@ TrackerHttp::process_scrape(const Object& object) {
                  files.as_map().size(), m_scrape_complete, m_scrape_incomplete, m_scrape_downloaded);
 
   close_directly();
-  m_parent->receive_scrape_success(this);
+  m_slot_scrape_success();
 }
 
 }

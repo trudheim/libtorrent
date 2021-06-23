@@ -57,8 +57,8 @@
 
 namespace torrent {
 
-TrackerList::TrackerList() :
-  m_info(NULL),
+TrackerList::TrackerList(DownloadInfo* info) :
+  m_info(info),
   m_state(DownloadInfo::STOPPED),
 
   m_key(0),
@@ -195,13 +195,13 @@ TrackerList::insert_url(unsigned int group, const std::string& url, bool extra_t
 
   if (std::strncmp("http://", url.c_str(), 7) == 0 ||
       std::strncmp("https://", url.c_str(), 8) == 0) {
-    tracker = new TrackerHttp(this, url, flags);
+    tracker = new TrackerHttp(m_info, url, flags);
 
   } else if (std::strncmp("udp://", url.c_str(), 6) == 0) {
-    tracker = new TrackerUdp(this, url, flags);
+    tracker = new TrackerUdp(m_info, url, flags);
 
   } else if (std::strncmp("dht://", url.c_str(), 6) == 0 && TrackerDht::is_allowed()) {
-    tracker = new TrackerDht(this, url, flags);
+    tracker = new TrackerDht(m_info, url, flags);
 
   } else {
     LT_LOG_TRACKER(WARN, "could find matching tracker protocol (url:%s)", url.c_str());
@@ -213,6 +213,16 @@ TrackerList::insert_url(unsigned int group, const std::string& url, bool extra_t
   }
   
   LT_LOG_TRACKER(INFO, "added tracker (group:%i url:%s)", group, url.c_str());
+
+  tracker->slot_success() = std::bind(&TrackerList::receive_success, this, tracker, std::placeholders::_1);
+  tracker->slot_failure() = std::bind(&TrackerList::receive_failed, this, tracker, std::placeholders::_1);
+  tracker->slot_scrape_success() = std::bind(&TrackerList::receive_scrape_success, this, tracker);
+  tracker->slot_scrape_failure() = std::bind(&TrackerList::receive_scrape_failed, this, tracker, std::placeholders::_1);
+  tracker->slot_tracker_enabled() = std::bind(&TrackerList::receive_tracker_enabled, this, tracker);
+  tracker->slot_tracker_disabled() = std::bind(&TrackerList::receive_tracker_disabled, this, tracker);
+  tracker->slot_key() = std::bind(&TrackerList::key, this);
+  tracker->slot_numwant() = std::bind(&TrackerList::numwant, this);
+
   insert(group, tracker);
 }
 
@@ -382,6 +392,18 @@ TrackerList::receive_scrape_failed(Tracker* tb, const std::string& msg) {
 
   if (m_slot_scrape_failed)
     m_slot_scrape_failed(tb, msg);
+}
+
+void
+TrackerList::receive_tracker_enabled(Tracker* t) {
+  if (m_slot_tracker_enabled)
+    m_slot_tracker_enabled(t);
+}
+
+void
+TrackerList::receive_tracker_disabled(Tracker* t) {
+  if (m_slot_tracker_disabled)
+    m_slot_tracker_disabled(t);
 }
 
 }

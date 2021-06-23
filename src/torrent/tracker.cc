@@ -45,9 +45,10 @@
 
 namespace torrent {
 
-Tracker::Tracker(TrackerList* parent, const std::string& url, int flags) :
+Tracker::Tracker(DownloadInfo* info, const std::string& url, int flags) :
   m_flags(flags),
-  m_parent(parent),
+  m_info(info),
+
   m_group(0),
   m_url(url),
 
@@ -82,9 +83,7 @@ Tracker::enable() {
     return;
 
   m_flags |= flag_enabled;
-  
-  if (m_parent->slot_tracker_enabled())
-    m_parent->slot_tracker_enabled()(this);
+  m_slot_tracker_enabled();
 }
 
 void
@@ -94,9 +93,7 @@ Tracker::disable() {
 
   close();
   m_flags &= ~flag_enabled;
-
-  if (m_parent->slot_tracker_disabled())
-    m_parent->slot_tracker_disabled()(this);
+  m_slot_tracker_disabled();
 }
 
 uint32_t
