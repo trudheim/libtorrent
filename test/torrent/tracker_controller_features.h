@@ -1,20 +1,20 @@
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "tracker_controller_test.h"
+#include "test_tracker_controller.h"
 
 class tracker_controller_features : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(tracker_controller_features);
 
-  CPPUNIT_TEST(test_requesting_basic);
-  CPPUNIT_TEST(test_requesting_timeout);
-  CPPUNIT_TEST(test_promiscious_timeout);
-  CPPUNIT_TEST(test_promiscious_failed);
+  // CPPUNIT_TEST(test_requesting_basic);
+  // CPPUNIT_TEST(test_requesting_timeout);
+  // CPPUNIT_TEST(test_promiscious_timeout);
+  // CPPUNIT_TEST(test_promiscious_failed);
 
-  CPPUNIT_TEST(test_scrape_basic);
-  CPPUNIT_TEST(test_scrape_priority);
+  // CPPUNIT_TEST(test_scrape_basic);
+  // CPPUNIT_TEST(test_scrape_priority);
 
-  CPPUNIT_TEST(test_groups_requesting);
-  CPPUNIT_TEST(test_groups_scrape);
+  // CPPUNIT_TEST(test_groups_requesting);
+  // CPPUNIT_TEST(test_groups_scrape);
 
   CPPUNIT_TEST_SUITE_END();
 

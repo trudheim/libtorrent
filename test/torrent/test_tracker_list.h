@@ -1,10 +1,17 @@
-#include <torrent/tracker.h>
-#include <torrent/tracker_list.h>
-#include <rak/timer.h>
-#include <cppunit/extensions/HelperMacros.h>
+#import <cppunit/extensions/HelperMacros.h>
 
-class test_tracker_list : public CppUnit::TestFixture {
+#import <memory>
+
+#import "helpers/test_fixture.h"
+
+#import "torrent/download_info.h"
+#import "torrent/tracker.h"
+#import "torrent/tracker_list.h"
+#import "rak/timer.h"
+
+class test_tracker_list : public test_fixture {
   CPPUNIT_TEST_SUITE(test_tracker_list);
+
   CPPUNIT_TEST(test_basic);
   CPPUNIT_TEST(test_enable);
   CPPUNIT_TEST(test_close);
@@ -23,10 +30,11 @@ class test_tracker_list : public CppUnit::TestFixture {
   CPPUNIT_TEST(test_scrape_failure);
 
   CPPUNIT_TEST(test_has_active);
+
   CPPUNIT_TEST_SUITE_END();
 
 public:
-  void setUp() {}
+  void setUp();
   void tearDown() {}
 
   void test_basic();
@@ -55,8 +63,8 @@ public:
   static const int flag_scrape_on_success = max_flag_size << 1;
 
   // TODO: Clean up tracker related enums.
-  TrackerTest(torrent::TrackerList* parent, const std::string& url, int flags = torrent::Tracker::flag_enabled) :
-    torrent::Tracker(parent, url, flags),
+  TrackerTest(torrent::DownloadInfo* info, const std::string& url, int flags = torrent::Tracker::flag_enabled) :
+    torrent::Tracker(info, url, flags),
     m_busy(false),
     m_open(false),
     m_requesting_state(-1) { m_flags |= flag_close_on_done; }
@@ -105,18 +113,21 @@ inline unsigned int increment_value_uint(int* value) { (*value)++; return return
 bool check_has_active_in_group(const torrent::TrackerList* tracker_list, const char* states, bool scrape);
 
 #define TRACKER_SETUP()                                                 \
-  torrent::TrackerList tracker_list;                                    \
+  auto download_info = std::make_unique<torrent::DownloadInfo>();       \
+  torrent::TrackerList tracker_list(download_info.get());               \
+                                                                        \
   int success_counter = 0;                                              \
   int failure_counter = 0;                                              \
   int scrape_success_counter = 0;                                       \
   int scrape_failure_counter = 0;                                       \
+                                                                        \
   tracker_list.slot_success() = std::bind(&increment_value_uint, &success_counter); \
   tracker_list.slot_failure() = std::bind(&increment_value_void, &failure_counter); \
   tracker_list.slot_scrape_success() = std::bind(&increment_value_void, &scrape_success_counter); \
   tracker_list.slot_scrape_failure() = std::bind(&increment_value_void, &scrape_failure_counter);
 
-#define TRACKER_INSERT(group, name)                             \
-  TrackerTest* name = new TrackerTest(&tracker_list, "");       \
+#define TRACKER_INSERT(group, name)                               \
+  TrackerTest* name = new TrackerTest(download_info.get(), "");  \
   tracker_list.insert(group, name);
 
 #define TEST_TRACKER_IS_BUSY(tracker, state)            \

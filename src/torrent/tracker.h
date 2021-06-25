@@ -57,8 +57,6 @@ public:
   void                enable();
   void                disable();
 
-  TrackerList*        parent()                              { return m_parent; }
-
   uint32_t            group() const                         { return m_group; }
   virtual Type        type() const = 0;
 
@@ -120,7 +118,6 @@ protected:
   int                 m_flags;
   DownloadInfo*       m_info;
 
-  TrackerList*        m_parent;
   uint32_t            m_group;
 
   std::string         m_url;
@@ -152,24 +149,6 @@ protected:
   uint32_t            m_request_counter;
 
 public:
-  // auto slot_success() -> &std::function<void (AddressList* l)>         { return m_slot_success; }
-  // auto slot_failure() -> &std::function<void (const std::string& msg)> { return m_slot_failure; }
-  // auto slot_scrape_success() -> &std::function<void ()>                       { return m_slot_scrape_success; }
-  // auto slot_scrape_failure() -> &std::function<void (const std::string& msg)> { return m_slot_scrape_failure; }
-  // auto slot_tracker_enabled() -> &std::function<void ()>               { return m_slot_tracker_enabled; }
-  // auto slot_tracker_disabled() -> &std::function<void ()>              { return m_slot_tracker_disabled; }
-  // auto slot_key() -> &std::function<uint32_t ()>                       { return m_slot_key; }
-  // auto slot_numwant() -> &std::function<int32_t ()>                    { return m_slot_numwant; }
-
-  // auto slot_success() -> std::function<void (AddressList* l)>&         { return m_slot_success; }
-  // auto slot_failure() -> std::function<void (const std::string& msg)>& { return m_slot_failure; }
-  // auto slot_scrape_success() -> std::function<void ()>&                       { return m_slot_scrape_success; }
-  // auto slot_scrape_failure() -> std::function<void (const std::string& msg)>& { return m_slot_scrape_failure; }
-  // auto slot_tracker_enabled() -> std::function<void ()>&               { return m_slot_tracker_enabled; }
-  // auto slot_tracker_disabled() -> std::function<void ()>&              { return m_slot_tracker_disabled; }
-  // auto slot_key() -> std::function<uint32_t ()>&                       { return m_slot_key; }
-  // auto slot_numwant() -> std::function<int32_t ()>&                    { return m_slot_numwant; }
-
   auto& slot_success()          { return m_slot_success; }
   auto& slot_failure()          { return m_slot_failure; }
   auto& slot_scrape_success()   { return m_slot_scrape_success; }

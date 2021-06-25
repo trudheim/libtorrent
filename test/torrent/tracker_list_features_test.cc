@@ -6,7 +6,7 @@
 #include "net/address_list.h"
 
 #include "globals.h"
-#include "tracker_list_test.h"
+#include "test_tracker_list.h"
 #include "tracker_list_features_test.h"
 
 CPPUNIT_TEST_SUITE_REGISTRATION(tracker_list_features_test);

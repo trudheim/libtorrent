@@ -1,56 +1,20 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
+#import "config.h"
 
-#include "config.h"
+#import <functional>
+#import <rak/functional.h>
 
-#include <functional>
-#include <rak/functional.h>
+#import "net/address_list.h"
+#import "torrent/utils/log.h"
+#import "torrent/utils/option_strings.h"
+#import "torrent/download_info.h"
+#import "tracker/tracker_dht.h"
+#import "tracker/tracker_http.h"
+#import "tracker/tracker_udp.h"
 
-#include "net/address_list.h"
-#include "torrent/utils/log.h"
-#include "torrent/utils/option_strings.h"
-#include "torrent/download_info.h"
-#include "tracker/tracker_dht.h"
-#include "tracker/tracker_http.h"
-#include "tracker/tracker_udp.h"
-
-#include "globals.h"
-#include "exceptions.h"
-#include "tracker.h"
-#include "tracker_list.h"
+#import "globals.h"
+#import "exceptions.h"
+#import "tracker.h"
+#import "tracker_list.h"
 
 #define LT_LOG_TRACKER(log_level, log_fmt, ...)                         \
   lt_log_print_info(LOG_TRACKER_##log_level, info(), "tracker_list", log_fmt, __VA_ARGS__);
@@ -175,7 +139,15 @@ TrackerList::send_scrape(Tracker* tracker) {
 TrackerList::iterator
 TrackerList::insert(unsigned int group, Tracker* tracker) {
   tracker->set_group(group);
-  
+  tracker->slot_success() = std::bind(&TrackerList::receive_success, this, tracker, std::placeholders::_1);
+  tracker->slot_failure() = std::bind(&TrackerList::receive_failed, this, tracker, std::placeholders::_1);
+  tracker->slot_scrape_success() = std::bind(&TrackerList::receive_scrape_success, this, tracker);
+  tracker->slot_scrape_failure() = std::bind(&TrackerList::receive_scrape_failed, this, tracker, std::placeholders::_1);
+  tracker->slot_tracker_enabled() = std::bind(&TrackerList::receive_tracker_enabled, this, tracker);
+  tracker->slot_tracker_disabled() = std::bind(&TrackerList::receive_tracker_disabled, this, tracker);
+  tracker->slot_key() = std::bind(&TrackerList::key, this);
+  tracker->slot_numwant() = std::bind(&TrackerList::numwant, this);
+
   iterator itr = base_type::insert(end_group(group), tracker);
 
   if (m_slot_tracker_enabled)
@@ -213,15 +185,6 @@ TrackerList::insert_url(unsigned int group, const std::string& url, bool extra_t
   }
   
   LT_LOG_TRACKER(INFO, "added tracker (group:%i url:%s)", group, url.c_str());
-
-  tracker->slot_success() = std::bind(&TrackerList::receive_success, this, tracker, std::placeholders::_1);
-  tracker->slot_failure() = std::bind(&TrackerList::receive_failed, this, tracker, std::placeholders::_1);
-  tracker->slot_scrape_success() = std::bind(&TrackerList::receive_scrape_success, this, tracker);
-  tracker->slot_scrape_failure() = std::bind(&TrackerList::receive_scrape_failed, this, tracker, std::placeholders::_1);
-  tracker->slot_tracker_enabled() = std::bind(&TrackerList::receive_tracker_enabled, this, tracker);
-  tracker->slot_tracker_disabled() = std::bind(&TrackerList::receive_tracker_disabled, this, tracker);
-  tracker->slot_key() = std::bind(&TrackerList::key, this);
-  tracker->slot_numwant() = std::bind(&TrackerList::numwant, this);
 
   insert(group, tracker);
 }

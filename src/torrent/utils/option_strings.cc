@@ -232,6 +232,8 @@ const char* option_list_log_group[] = {
 
   "system",
 
+  "tracker_state_debug",
+
   "ui_events",
 
   NULL
