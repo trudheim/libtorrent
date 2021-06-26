@@ -11,6 +11,9 @@
 
 #include "helpers/mock_compare.h"
 
+void mock_clear(bool ignore_assert = false);
+void mock_clear_ignore_assert();
+
 template<typename R, typename... Args>
 struct mock_function_map {
   typedef std::tuple<R, Args...> call_type;
@@ -72,9 +75,6 @@ struct mock_function_type<void, Args...> {
   static bool has_redirect(void* fn) { return type::redirects.find(fn) != type::redirects.end(); }
   static void call_redirect(void* fn, Args... args) { type::redirects.find(fn)->second(args...); }
 };
-
-void mock_init();
-void mock_cleanup();
 
 template<typename R, typename... Args>
 bool

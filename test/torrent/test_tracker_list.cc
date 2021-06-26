@@ -11,12 +11,13 @@ CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_list, "torrent::tracker_list"
 
 void
 test_tracker_list::setUp() {
+  test_fixture::setUp();
+
   // TODO: Refactor tracker logging types:
   log_add_group_output(torrent::LOG_TRACKER_WARN, "test_output");
   log_add_group_output(torrent::LOG_TRACKER_INFO, "test_output");
   log_add_group_output(torrent::LOG_TRACKER_DEBUG, "test_output");
-
-  lt_log_print(torrent::LOG_TRACKER_INFO, "testing logging", 0)
+  log_add_group_output(torrent::LOG_TRACKER_STATE_DEBUG, "test_output");
 }
 
 uint32_t return_new_peers = 0xdeadbeef;

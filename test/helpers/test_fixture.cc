@@ -2,17 +2,21 @@
 
 #include "test_fixture.h"
 
+#include "globals.h"
 #include "torrent/utils/log.h"
+#include "rak/timer.h"
 
 void
 test_fixture::setUp() {
-  mock_init();
+  mock_clear_ignore_assert();
 
-  log_add_group_output(torrent::LOG_CONNECTION_BIND, "test_output");
-  log_add_group_output(torrent::LOG_CONNECTION_FD, "test_output");
+  log_add_group_output(torrent::LOG_MOCK_CALLS, "test_output");
+
+  // TODO: Start replacing cachedTime with clock_gettime(CLOCK_REALTIME_COARSE, ...).
+  torrent::cachedTime = rak::timer::current();
 }
 
 void
 test_fixture::tearDown() {
-  mock_cleanup();
+  mock_clear();
 }

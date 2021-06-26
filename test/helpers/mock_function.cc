@@ -42,14 +42,7 @@ mock_clear(bool ignore_assert) {
   mock_compare_map<torrent::Event>::values.clear();
 };
 
-void mock_init() {
-  log_add_group_output(torrent::LOG_MOCK_CALLS, "test_output");
-  mock_clear(true);
-}
-
-void mock_cleanup() {
-  mock_clear(false);
-}
+void mock_clear_ignore_assert() { mock_clear(true); }
 
 namespace torrent {
 

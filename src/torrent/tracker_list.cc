@@ -19,6 +19,9 @@
 #define LT_LOG_TRACKER(log_level, log_fmt, ...)                         \
   lt_log_print_info(LOG_TRACKER_##log_level, info(), "tracker_list", log_fmt, __VA_ARGS__);
 
+#define LT_LOG_STATE_DEBUG(log_fmt, ...)                                \
+  lt_log_print_info(LOG_TRACKER_STATE_DEBUG, info(), "tracker_list::state_debug", log_fmt, __VA_ARGS__);
+
 namespace torrent {
 
 TrackerList::TrackerList(DownloadInfo* info) :
@@ -100,15 +103,21 @@ TrackerList::clear_stats() {
 
 void
 TrackerList::send_state(Tracker* tracker, int new_event) {
-  if (!tracker->is_usable() || new_event == Tracker::EVENT_SCRAPE)
+  if (!tracker->is_usable() || new_event == Tracker::EVENT_SCRAPE) {
+    LT_LOG_STATE_DEBUG("send state skipped: !is_usable || new_event == EVENT_SCRAPE", 0)
     return;
+  }
 
   if (tracker->is_busy()) {
-    if (tracker->latest_event() != Tracker::EVENT_SCRAPE)
+    if (tracker->latest_event() != Tracker::EVENT_SCRAPE) {
+      LT_LOG_STATE_DEBUG("send state skipped: already making a non-scrape request", 0)
       return;
+    }
 
     tracker->close();
   }
+
+  LT_LOG_STATE_DEBUG("sending state", 0)
 
   tracker->send_state(new_event);
   tracker->inc_request_counter();
@@ -120,14 +129,22 @@ TrackerList::send_state(Tracker* tracker, int new_event) {
 
 void
 TrackerList::send_scrape(Tracker* tracker) {
-  if (tracker->is_busy() || !tracker->is_usable())
+  if (tracker->is_busy() || !tracker->is_usable()) {
+    LT_LOG_STATE_DEBUG("send scrape skipped: is_busy || !is_usable", 0)
     return;
+  }
 
-  if (!(tracker->flags() & Tracker::flag_can_scrape))
+  if (!(tracker->flags() & Tracker::flag_can_scrape)) {
+    LT_LOG_STATE_DEBUG("send scrape skipped: !can_scrape", 0)
     return;
+  }
 
-  if (rak::timer::from_seconds(tracker->scrape_time_last()) + rak::timer::from_seconds(10 * 60) > cachedTime )
+  if (rak::timer::from_seconds(tracker->scrape_time_last()) + rak::timer::from_seconds(10 * 60) > cachedTime ) {
+    LT_LOG_STATE_DEBUG("send scrape skipped: time_last:%" PRIu32 " cached_time:%" PRIu32, tracker->scrape_time_last(), cachedTime.seconds())
     return;
+  }
+
+  LT_LOG_STATE_DEBUG("sending scrape", 0)
 
   tracker->send_scrape();
   tracker->inc_request_counter();

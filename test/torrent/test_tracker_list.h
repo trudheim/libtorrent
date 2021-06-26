@@ -35,7 +35,6 @@ class test_tracker_list : public test_fixture {
 
 public:
   void setUp();
-  void tearDown() {}
 
   void test_basic();
   void test_enable();
@@ -57,6 +56,7 @@ public:
   void test_has_active();
 };
 
+// TODO: Move.
 class TrackerTest : public torrent::Tracker {
 public:
   static const int flag_close_on_done = max_flag_size << 0;
