@@ -1,29 +1,30 @@
-#include "config.h"
+#import "config.h"
 
-#include <functional>
+#import <functional>
 
-#include "torrent/http.h"
-#include "net/address_list.h"
+#import "torrent/http.h"
+#import "torrent/utils/log.h"
+#import "net/address_list.h"
 
-#include "globals.h"
-#include "test_tracker_list.h"
-#include "tracker_list_features_test.h"
+#import "globals.h"
+#import "test_tracker_list.h"
+#import "test_tracker_list_features.h"
 
-CPPUNIT_TEST_SUITE_REGISTRATION(tracker_list_features_test);
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_list_features, "torrent::tracker_list");
 
 void
-tracker_list_features_test::setUp() {
-  CPPUNIT_ASSERT(torrent::taskScheduler.empty());
+test_tracker_list_features::setUp() {
+  test_fixture::setUp();
 
-  torrent::cachedTime = rak::timer::current();
+  // TODO: Refactor tracker logging types:
+  log_add_group_output(torrent::LOG_TRACKER_WARN, "test_output");
+  log_add_group_output(torrent::LOG_TRACKER_INFO, "test_output");
+  log_add_group_output(torrent::LOG_TRACKER_DEBUG, "test_output");
+  log_add_group_output(torrent::LOG_TRACKER_STATE_DEBUG, "test_output");
 }
 
 void
-tracker_list_features_test::tearDown() {
-}
-
-void
-tracker_list_features_test::test_new_peers() {
+test_tracker_list_features::test_new_peers() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0);
   
@@ -51,7 +52,7 @@ tracker_list_features_test::test_new_peers() {
 // test has_active, and then clean up TrackerManager.
 
 void
-tracker_list_features_test::test_has_active() {
+test_tracker_list_features::test_has_active() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0_0);
   TRACKER_INSERT(0, tracker_0_1);
@@ -84,7 +85,7 @@ tracker_list_features_test::test_has_active() {
 }
 
 void
-tracker_list_features_test::test_find_next_to_request() {
+test_tracker_list_features::test_find_next_to_request() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0);
   TRACKER_INSERT(0, tracker_1);
@@ -123,7 +124,7 @@ tracker_list_features_test::test_find_next_to_request() {
 }
 
 void
-tracker_list_features_test::test_find_next_to_request_groups() {
+test_tracker_list_features::test_find_next_to_request_groups() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0);
   TRACKER_INSERT(0, tracker_1);
@@ -146,7 +147,7 @@ tracker_list_features_test::test_find_next_to_request_groups() {
 }
 
 void
-tracker_list_features_test::test_count_active() {
+test_tracker_list_features::test_count_active() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0_0);
   TRACKER_INSERT(0, tracker_0_1);
@@ -193,7 +194,7 @@ verify_did_internal_error(std::function<void ()> func, bool should_throw) {
 }
 
 void
-tracker_list_features_test::test_request_safeguard() {
+test_tracker_list_features::test_request_safeguard() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_1);
   TRACKER_INSERT(0, tracker_2);
