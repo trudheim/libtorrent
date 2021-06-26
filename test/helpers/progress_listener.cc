@@ -1,22 +1,30 @@
-#include "config.h"
+#import "config.h"
 
-#include "progress_listener.h"
+#import "progress_listener.h"
 
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <numeric>
-#include <stdexcept>
-#include "torrent/utils/log.h"
-#include "torrent/utils/log_buffer.h"
+#import <algorithm>
+#import <iostream>
+#import <iterator>
+#import <numeric>
+#import <stdexcept>
+#import <cppunit/TestSuite.h>
+#import "torrent/utils/log.h"
+#import "torrent/utils/log_buffer.h"
 
 static std::string
 get_test_path(const test_list_type& tl) {
-  if (tl.size() < 2)
+  if (tl.size() < 3)
     return "";
 
-  return std::accumulate(std::next(tl.begin()), std::prev(tl.end()), std::string(), [](std::string result, CppUnit::Test* test) {
+  return std::accumulate(std::next(std::next(tl.begin())), std::prev(tl.end()), std::string(), [](std::string result, CppUnit::Test* test) {
       return std::move(result) + test->getName() + "::";
+    });
+}
+
+static bool
+get_sub_suite_count(CppUnit::TestSuite *suite) {
+  return std::accumulate(suite->getTests().begin(), suite->getTests().end(), 0, [](int result, CppUnit::Test* test) {
+      return result + (dynamic_cast<CppUnit::TestSuite*>(test) != nullptr);
     });
 }
 
@@ -54,8 +62,28 @@ void
 progress_listener::startSuite(CppUnit::Test *suite) {
   m_test_path.push_back(suite);
 
-  if (suite->countTestCases() > 0)
-    std::cout << std::endl << get_test_path(m_test_path) << suite->getName() << ":" << std::endl;
+  if (suite->countTestCases() == 0)
+    return;
+
+  auto test_suite = dynamic_cast<CppUnit::TestSuite*>(suite);
+  if (test_suite == nullptr)
+    return;
+
+  auto sub_suite_count = get_sub_suite_count(test_suite);
+
+  if (sub_suite_count != 0 ) {
+    std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
+    std::cout << suite->getName() << ":" << std::endl;
+    std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
+
+    if (sub_suite_count == suite->countTestCases())
+      std::cout << std::endl;
+
+  } else {
+    std::cout << std::endl;
+  }
 }
 
 void

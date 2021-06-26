@@ -2,10 +2,12 @@
 
 #import <memory>
 
+#import "helpers/test_fixture.h"
+
 #import "torrent/download_info.h"
 #import "torrent/tracker_controller.h"
 
-class test_tracker_controller : public CppUnit::TestFixture {
+class test_tracker_controller : public test_fixture {
   CPPUNIT_TEST_SUITE(test_tracker_controller);
 
   CPPUNIT_TEST(test_basic);
@@ -13,34 +15,31 @@ class test_tracker_controller : public CppUnit::TestFixture {
   CPPUNIT_TEST(test_requesting);
   CPPUNIT_TEST(test_timeout);
 
-  // CPPUNIT_TEST(test_single_success);
-  // CPPUNIT_TEST(test_single_failure);
-  // CPPUNIT_TEST(test_single_disable);
+  CPPUNIT_TEST(test_single_success);
+  CPPUNIT_TEST(test_single_failure);
+  CPPUNIT_TEST(test_single_disable);
 
-  // CPPUNIT_TEST(test_send_start);
-  // CPPUNIT_TEST(test_send_stop_normal);
-  // CPPUNIT_TEST(test_send_completed_normal);
-  // CPPUNIT_TEST(test_send_update_normal);
-  // CPPUNIT_TEST(test_send_update_failure);
-  // CPPUNIT_TEST(test_send_task_timeout);
-  // CPPUNIT_TEST(test_send_close_on_enable);
+  CPPUNIT_TEST(test_send_start);
+  CPPUNIT_TEST(test_send_stop_normal);
+  CPPUNIT_TEST(test_send_completed_normal);
+  CPPUNIT_TEST(test_send_update_normal);
+  CPPUNIT_TEST(test_send_update_failure);
+  CPPUNIT_TEST(test_send_task_timeout);
+  CPPUNIT_TEST(test_send_close_on_enable);
 
-  // CPPUNIT_TEST(test_multiple_success);
-  // CPPUNIT_TEST(test_multiple_failure);
-  // CPPUNIT_TEST(test_multiple_cycle);
-  // CPPUNIT_TEST(test_multiple_cycle_second_group);
-  // CPPUNIT_TEST(test_multiple_send_stop);
+  CPPUNIT_TEST(test_multiple_success);
+  CPPUNIT_TEST(test_multiple_failure);
+  CPPUNIT_TEST(test_multiple_cycle);
+  CPPUNIT_TEST(test_multiple_cycle_second_group);
+  CPPUNIT_TEST(test_multiple_send_stop);
 
-  // CPPUNIT_TEST(test_timeout_lacking_usable);
-  // CPPUNIT_TEST(test_disable_tracker);
-  // CPPUNIT_TEST(test_new_peers);
+  CPPUNIT_TEST(test_timeout_lacking_usable);
+  CPPUNIT_TEST(test_disable_tracker);
+  CPPUNIT_TEST(test_new_peers);
 
   CPPUNIT_TEST_SUITE_END();
 
 public:
-  void setUp();
-  void tearDown();
-
   void test_basic();
   void test_enable();
   void test_disable();

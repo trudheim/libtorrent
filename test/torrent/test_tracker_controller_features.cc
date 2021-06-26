@@ -1,30 +1,18 @@
-#include "config.h"
+#import "config.h"
 
-#include <functional>
-#include <iostream>
+#import <functional>
+#import <iostream>
 
-#include "rak/priority_queue_default.h"
+#import "rak/priority_queue_default.h"
 
-#include "globals.h"
-#include "test_tracker_list.h"
-#include "tracker_controller_features.h"
+#import "globals.h"
+#import "test_tracker_list.h"
+#import "test_tracker_controller_features.h"
 
-CPPUNIT_TEST_SUITE_REGISTRATION(tracker_controller_features);
-
-void
-tracker_controller_features::setUp() {
-  CPPUNIT_ASSERT(torrent::taskScheduler.empty());
-
-  torrent::cachedTime = rak::timer::current();
-}
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_controller_features, "torrent::tracker_controller");
 
 void
-tracker_controller_features::tearDown() {
-  torrent::taskScheduler.clear();
-}
-
-void
-tracker_controller_features::test_requesting_basic() {
+test_tracker_controller_features::test_requesting_basic() {
   TEST_MULTI3_BEGIN();
   TEST_SEND_SINGLE_BEGIN(update);
 
@@ -60,7 +48,7 @@ tracker_controller_features::test_requesting_basic() {
 }
 
 void
-tracker_controller_features::test_requesting_timeout() {
+test_tracker_controller_features::test_requesting_timeout() {
   TEST_MULTI3_BEGIN();
   TEST_SEND_SINGLE_BEGIN(update);
 
@@ -90,7 +78,7 @@ tracker_controller_features::test_requesting_timeout() {
 }
 
 void
-tracker_controller_features::test_promiscious_timeout() {
+test_tracker_controller_features::test_promiscious_timeout() {
   TEST_MULTI3_BEGIN();
   TEST_SEND_SINGLE_BEGIN(start);
 
@@ -118,7 +106,7 @@ tracker_controller_features::test_promiscious_timeout() {
 // situations. This includes fixing old tests.
 
 void
-tracker_controller_features::test_promiscious_failed() {
+test_tracker_controller_features::test_promiscious_failed() {
   TEST_MULTI3_BEGIN();
   TEST_SEND_SINGLE_BEGIN(start);
 
@@ -149,7 +137,7 @@ tracker_controller_features::test_promiscious_failed() {
 }
 
 void
-tracker_controller_features::test_scrape_basic() {
+test_tracker_controller_features::test_scrape_basic() {
   TEST_GROUP_BEGIN();
   tracker_controller.disable();
 
@@ -191,7 +179,7 @@ tracker_controller_features::test_scrape_basic() {
 }
 
 void
-tracker_controller_features::test_scrape_priority() {
+test_tracker_controller_features::test_scrape_priority() {
   TEST_SINGLE_BEGIN();
   CPPUNIT_ASSERT(test_goto_next_timeout(&tracker_controller, 0));
   tracker_0_0->trigger_success();
@@ -234,7 +222,7 @@ tracker_controller_features::test_scrape_priority() {
 }
 
 void
-tracker_controller_features::test_groups_requesting() {
+test_tracker_controller_features::test_groups_requesting() {
   TEST_GROUP_BEGIN();
   TEST_SEND_SINGLE_BEGIN(start);
 
@@ -273,7 +261,7 @@ tracker_controller_features::test_groups_requesting() {
 }
 
 void
-tracker_controller_features::test_groups_scrape() {
+test_tracker_controller_features::test_groups_scrape() {
   TEST_GROUP_BEGIN();
   tracker_controller.disable();
 

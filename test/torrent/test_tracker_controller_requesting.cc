@@ -1,27 +1,15 @@
-#include "config.h"
+#import "config.h"
 
-#include <functional>
-#include <iostream>
+#import <functional>
+#import <iostream>
 
-#include "rak/priority_queue_default.h"
+#import "rak/priority_queue_default.h"
 
-#include "globals.h"
-#include "test_tracker_list.h"
-#include "tracker_controller_requesting.h"
+#import "globals.h"
+#import "test_tracker_list.h"
+#import "test_tracker_controller_requesting.h"
 
-CPPUNIT_TEST_SUITE_REGISTRATION(tracker_controller_requesting);
-
-void
-tracker_controller_requesting::setUp() {
-  CPPUNIT_ASSERT(torrent::taskScheduler.empty());
-
-  torrent::cachedTime = rak::timer::current();
-}
-
-void
-tracker_controller_requesting::tearDown() {
-  torrent::taskScheduler.clear();
-}
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_controller_requesting, "torrent::tracker_controller");
 
 void
 do_test_hammering_basic(bool success1, bool success2, bool success3, uint32_t min_interval = 0) {
@@ -69,32 +57,32 @@ do_test_hammering_basic(bool success1, bool success2, bool success3, uint32_t mi
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_success() {
+test_tracker_controller_requesting::test_hammering_basic_success() {
   do_test_hammering_basic(true, true, true);
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_success_long_timeout() {
+test_tracker_controller_requesting::test_hammering_basic_success_long_timeout() {
   do_test_hammering_basic(true, true, true, 1000);
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_success_short_timeout() {
+test_tracker_controller_requesting::test_hammering_basic_success_short_timeout() {
   do_test_hammering_basic(true, true, true, 300);
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_failure() {
+test_tracker_controller_requesting::test_hammering_basic_failure() {
   do_test_hammering_basic(true, false, false);
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_failure_long_timeout() {
+test_tracker_controller_requesting::test_hammering_basic_failure_long_timeout() {
   do_test_hammering_basic(true, false, false, 1000);
 }
 
 void
-tracker_controller_requesting::test_hammering_basic_failure_short_timeout() {
+test_tracker_controller_requesting::test_hammering_basic_failure_short_timeout() {
   do_test_hammering_basic(true, false, false, 300);
 }
 
@@ -169,20 +157,20 @@ do_test_hammering_multi3(bool success1, bool success2, bool success3, uint32_t m
 }
 
 void
-tracker_controller_requesting::test_hammering_multi_success() {
+test_tracker_controller_requesting::test_hammering_multi_success() {
   do_test_hammering_multi3(true, true, true);
 }
 
 void
-tracker_controller_requesting::test_hammering_multi_success_long_timeout() {
+test_tracker_controller_requesting::test_hammering_multi_success_long_timeout() {
   do_test_hammering_multi3(true, true, true, 1000);
 }
 
 void
-tracker_controller_requesting::test_hammering_multi_success_short_timeout() {
+test_tracker_controller_requesting::test_hammering_multi_success_short_timeout() {
   do_test_hammering_multi3(true, true, true, 300);
 }
 
 void
-tracker_controller_requesting::test_hammering_multi_failure() {
+test_tracker_controller_requesting::test_hammering_multi_failure() {
 }

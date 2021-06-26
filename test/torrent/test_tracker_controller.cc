@@ -9,7 +9,7 @@
 #import "test_tracker_list.h"
 #import "test_tracker_controller.h"
 
-CPPUNIT_TEST_SUITE_REGISTRATION(test_tracker_controller);
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_controller, "torrent::tracker_controller");
 
 bool
 test_goto_next_timeout(torrent::TrackerController* tracker_controller, uint32_t assumed_timeout, bool is_scrape) {
@@ -46,18 +46,6 @@ test_goto_next_timeout(torrent::TrackerController* tracker_controller, uint32_t 
   torrent::cachedTime += rak::timer::from_seconds(is_scrape ? next_scrape : next_timeout);
   rak::priority_queue_perform(&torrent::taskScheduler, torrent::cachedTime);
   return true;
-}
-
-void
-test_tracker_controller::setUp() {
-  CPPUNIT_ASSERT(torrent::taskScheduler.empty());
-
-  torrent::cachedTime = rak::timer::current();
-}
-
-void
-test_tracker_controller::tearDown() {
-  torrent::taskScheduler.clear();
 }
 
 void
