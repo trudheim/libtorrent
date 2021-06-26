@@ -206,56 +206,56 @@ test_tracker_controller::test_send_stop_normal() {
 
 void
 test_tracker_controller::test_send_completed_normal() {
-  // TEST_SINGLE_BEGIN();
-  // TEST_SEND_SINGLE_BEGIN(update);
+  TEST_SINGLE_BEGIN();
+  TEST_SEND_SINGLE_BEGIN(update);
 
-  // CPPUNIT_ASSERT(tracker_controller.task_timeout()->is_queued());
-  // CPPUNIT_ASSERT(tracker_0_0->trigger_success());
+  CPPUNIT_ASSERT(tracker_controller.task_timeout()->is_queued());
+  CPPUNIT_ASSERT(tracker_0_0->trigger_success());
 
 
-  // tracker_controller.send_completed_event();
-  // CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == torrent::TrackerController::flag_send_completed);
+  tracker_controller.send_completed_event();
+  CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == torrent::TrackerController::flag_send_completed);
 
-  // CPPUNIT_ASSERT(tracker_controller.seconds_to_next_timeout() == 0);
+  CPPUNIT_ASSERT(tracker_controller.seconds_to_next_timeout() == 0);
 
-  // CPPUNIT_ASSERT(tracker_0_0->trigger_success());
-  // CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == 0);
+  CPPUNIT_ASSERT(tracker_0_0->trigger_success());
+  CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == 0);
 
-  // tracker_controller.send_completed_event();
-  // tracker_controller.disable();
+  tracker_controller.send_completed_event();
+  tracker_controller.disable();
 
-  // CPPUNIT_ASSERT(tracker_0_0->is_busy());
-  // tracker_0_0->trigger_success();
+  CPPUNIT_ASSERT(tracker_0_0->is_busy());
+  tracker_0_0->trigger_success();
 
-  // TEST_SEND_SINGLE_END(3, 0);
+  TEST_SEND_SINGLE_END(3, 0);
 }
 
 void
 test_tracker_controller::test_send_update_normal() {
-  // TEST_SINGLE_BEGIN();
-  // TEST_SEND_SINGLE_BEGIN(update);
+  TEST_SINGLE_BEGIN();
+  TEST_SEND_SINGLE_BEGIN(update);
 
-  // CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == torrent::TrackerController::flag_send_update);
+  CPPUNIT_ASSERT((tracker_controller.flags() & torrent::TrackerController::mask_send) == torrent::TrackerController::flag_send_update);
 
-  // CPPUNIT_ASSERT(tracker_controller.task_timeout()->is_queued());
-  // CPPUNIT_ASSERT(tracker_0_0->latest_event() == torrent::Tracker::EVENT_NONE);
+  CPPUNIT_ASSERT(tracker_controller.task_timeout()->is_queued());
+  CPPUNIT_ASSERT(tracker_0_0->latest_event() == torrent::Tracker::EVENT_NONE);
 
-  // CPPUNIT_ASSERT(tracker_0_0->trigger_success());
+  CPPUNIT_ASSERT(tracker_0_0->trigger_success());
 
-  // TEST_SEND_SINGLE_END(1, 0);
+  TEST_SEND_SINGLE_END(1, 0);
 }
 
 void
 test_tracker_controller::test_send_update_failure() {
-  // torrent::cachedTime = rak::timer::from_seconds(1 << 20);
-  // TEST_SINGLE_BEGIN();
+  torrent::cachedTime = rak::timer::from_seconds(1 << 20);
+  TEST_SINGLE_BEGIN();
 
-  // tracker_controller.send_update_event();
+  tracker_controller.send_update_event();
 
-  // TEST_SINGLE_FAILURE_TIMEOUT(5);
-  // TEST_SINGLE_FAILURE_TIMEOUT(10);
+  TEST_SINGLE_FAILURE_TIMEOUT(5);
+  TEST_SINGLE_FAILURE_TIMEOUT(10);
 
-  // TEST_SINGLE_END(0, 2);
+  TEST_SINGLE_END(0, 2);
 }
 
 void

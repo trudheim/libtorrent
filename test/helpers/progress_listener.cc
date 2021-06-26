@@ -7,6 +7,7 @@
 #import <iterator>
 #import <numeric>
 #import <stdexcept>
+#import <cppunit/TestCase.h>
 #import <cppunit/TestSuite.h>
 #import "torrent/utils/log.h"
 #import "torrent/utils/log_buffer.h"
@@ -21,10 +22,36 @@ get_test_path(const test_list_type& tl) {
     });
 }
 
-static bool
-get_sub_suite_count(CppUnit::TestSuite *suite) {
-  return std::accumulate(suite->getTests().begin(), suite->getTests().end(), 0, [](int result, CppUnit::Test* test) {
+static int
+get_suite_count(CppUnit::Test *suite) {
+  auto test_suite = dynamic_cast<CppUnit::TestSuite*>(suite);
+  if (test_suite == nullptr)
+    return 0;
+
+  return std::accumulate(test_suite->getTests().begin(), test_suite->getTests().end(), 0, [](int result, CppUnit::Test* test) {
       return result + (dynamic_cast<CppUnit::TestSuite*>(test) != nullptr);
+    });
+}
+
+static int
+get_case_count(CppUnit::Test *suite) {
+  auto test_suite = dynamic_cast<CppUnit::TestSuite*>(suite);
+  if (test_suite == nullptr)
+    return 0;
+
+  return std::accumulate(test_suite->getTests().begin(), test_suite->getTests().end(), 0, [](int result, CppUnit::Test* test) {
+      return result + (dynamic_cast<CppUnit::TestCase*>(test) != nullptr);
+    });
+}
+
+static int
+get_sub_case_count(CppUnit::Test *suite) {
+  auto test_suite = dynamic_cast<CppUnit::TestSuite*>(suite);
+  if (test_suite == nullptr)
+    return 0;
+
+  return std::accumulate(test_suite->getTests().begin(), test_suite->getTests().end(), 0, [](int result, CppUnit::Test* test) {
+      return result + get_case_count(test);
     });
 }
 
@@ -65,25 +92,19 @@ progress_listener::startSuite(CppUnit::Test *suite) {
   if (suite->countTestCases() == 0)
     return;
 
-  auto test_suite = dynamic_cast<CppUnit::TestSuite*>(suite);
-  if (test_suite == nullptr)
+  if (get_suite_count(suite) == 0) {
+    std::cout << std::endl;
+    return;
+  }
+
+  if (get_sub_case_count(suite) == 0)
     return;
 
-  auto sub_suite_count = get_sub_suite_count(test_suite);
-
-  if (sub_suite_count != 0 ) {
-    std::cout << std::endl;
-    std::cout << std::endl;
-    std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
-    std::cout << suite->getName() << ":" << std::endl;
-    std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
-
-    if (sub_suite_count == suite->countTestCases())
-      std::cout << std::endl;
-
-  } else {
-    std::cout << std::endl;
-  }
+  std::cout << std::endl;
+  std::cout << std::endl;
+  std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
+  std::cout << suite->getName() << ":" << std::endl;
+  std::cout << std::string(suite->getName().size() + 1, '=') << std::endl;
 }
 
 void
