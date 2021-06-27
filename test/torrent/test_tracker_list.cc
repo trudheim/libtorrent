@@ -1,27 +1,15 @@
 #import "config.h"
 
-#import "torrent/http.h"
+#import "globals.h"
 #import "torrent/utils/log.h"
 #import "net/address_list.h"
 
-#import "globals.h"
 #import "test_tracker_list.h"
+#import "mocks/http.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_list, "torrent::tracker_list");
 
 uint32_t return_new_peers = 0xdeadbeef;
-
-class http_get : public torrent::Http {
-public:
-  ~http_get() { }
-
-  // Start must never throw on bad input. Calling start/stop on an
-  // object in the wrong state should throw a torrent::internal_error.
-  void       start() { }
-  void       close() { }
-};
-
-torrent::Http* http_factory() { return new http_get; }
 
 bool
 TrackerTest::trigger_success(uint32_t new_peers, uint32_t sum_peers) {
@@ -225,7 +213,7 @@ test_tracker_list::test_find_url() {
 void
 test_tracker_list::test_can_scrape() {
   TRACKER_SETUP();
-  torrent::Http::slot_factory() = std::bind(&http_factory);
+  torrent::Http::slot_factory() = std::bind(&mocks::create_http_getter);
 
   tracker_list.insert_url(0, "http://example.com/announce");
   CPPUNIT_ASSERT((tracker_list.back()->flags() & torrent::Tracker::flag_can_scrape));

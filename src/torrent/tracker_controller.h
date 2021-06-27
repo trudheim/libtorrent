@@ -1,47 +1,11 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
-
 #ifndef LIBTORRENT_TRACKER_CONTROLLER_H
 #define LIBTORRENT_TRACKER_CONTROLLER_H
 
-#include <functional>
-#include <string>
+#import <functional>
+#import <string>
 
-#include <torrent/common.h>
-#include <torrent/tracker.h>
+#import <torrent/common.h>
+#import <torrent/tracker.h>
 
 // Refactor:
 namespace rak { class priority_item; }
@@ -55,11 +19,6 @@ struct tracker_controller_private;
 class LIBTORRENT_EXPORT TrackerController {
 public:
   typedef AddressList address_list;
-
-  typedef std::function<void (void)>               slot_void;
-  typedef std::function<void (const std::string&)> slot_string;
-  typedef std::function<uint32_t (AddressList*)>   slot_address_list;
-  typedef std::function<void (Tracker*)>           slot_tracker;
 
   static const int flag_send_update      = 0x1;
   static const int flag_send_completed   = 0x2;
@@ -120,18 +79,14 @@ public:
   void                receive_tracker_enabled(Tracker* tb);
   void                receive_tracker_disabled(Tracker* tb);
 
-  slot_void&          slot_timeout()        { return m_slot_timeout; }
-  slot_address_list&  slot_success()        { return m_slot_success; }
-  slot_string&        slot_failure()        { return m_slot_failure; }
-
-  slot_tracker&       slot_tracker_enabled()  { return m_slot_tracker_enabled; }
-  slot_tracker&       slot_tracker_disabled() { return m_slot_tracker_disabled; }
-
   // TEMP:
   rak::priority_item* task_timeout();
   rak::priority_item* task_scrape();
 
 private:
+  TrackerController() = delete;
+  void operator = (const TrackerController&) = delete;
+
   void                do_timeout();
   void                do_scrape();
 
@@ -139,21 +94,25 @@ private:
 
   inline int          current_send_state() const;
 
-  TrackerController();
-  void operator = (const TrackerController&);
-
   int                 m_flags;
   TrackerList*        m_tracker_list;
 
-  slot_void           m_slot_timeout;
-  slot_address_list   m_slot_success;
-  slot_string         m_slot_failure;
-
-  slot_tracker        m_slot_tracker_enabled;
-  slot_tracker        m_slot_tracker_disabled;
-
   // Refactor this out.
   tracker_controller_private* m_private;
+
+public:
+  auto& slot_timeout()          { return m_slot_timeout; }
+  auto& slot_success()          { return m_slot_success; }
+  auto& slot_failure()          { return m_slot_failure; }
+  auto& slot_tracker_enabled()  { return m_slot_tracker_enabled; }
+  auto& slot_tracker_disabled() { return m_slot_tracker_disabled; }
+
+private:
+  std::function<void (void)>               m_slot_timeout;
+  std::function<uint32_t (AddressList*)>   m_slot_success;
+  std::function<void (const std::string&)> m_slot_failure;
+  std::function<void (Tracker*)>           m_slot_tracker_enabled;
+  std::function<void (Tracker*)>           m_slot_tracker_disabled;
 };
 
 uint32_t tracker_next_timeout(Tracker* tracker, int controller_flags);

@@ -1,9 +1,10 @@
-#include "config.h"
+#import "config.h"
 
-#include "test_http.h"
+#import "test_http.h"
 
-#include <sstream>
-#include "torrent/http.h"
+#import <sstream>
+
+#import "torrent/http.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_http, "torrent");
 
@@ -34,6 +35,7 @@ class TestHttp : public torrent::Http {
 public:
   static const int flag_active = 0x1;
 
+  // TODO: Remove need for 'destroyed' by using shared_ptr.
   TestHttp(bool *destroyed = NULL) : m_flags(0), m_destroyed(destroyed) {}
   virtual ~TestHttp() { if (m_destroyed) *m_destroyed = true; }
   
