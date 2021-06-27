@@ -1,51 +1,15 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
+#import "config.h"
 
-#include "config.h"
+#import "exceptions.h"
+#import "download_info.h"
+#import "tracker.h"
+#import "tracker_controller.h"
+#import "tracker_list.h"
 
-#include "exceptions.h"
-#include "download_info.h"
-#include "tracker.h"
-#include "tracker_controller.h"
-#include "tracker_list.h"
+#import "rak/priority_queue_default.h"
+#import "utils/log.h"
 
-#include "rak/priority_queue_default.h"
-#include "utils/log.h"
-
-#include "globals.h"
+#import "globals.h"
 
 #define LT_LOG_TRACKER(log_level, log_fmt, ...)                         \
   lt_log_print_info(LOG_TRACKER_##log_level, m_tracker_list->info(), "tracker_controller", log_fmt, __VA_ARGS__);
@@ -220,7 +184,7 @@ TrackerController::send_stop_event() {
     if (!(*itr)->is_in_use())
       continue;
 
-    m_tracker_list->send_state(*itr, Tracker::EVENT_STOPPED);
+    m_tracker_list->send_state(itr->get(), Tracker::EVENT_STOPPED);
   }
 
   // Timer...
@@ -251,7 +215,7 @@ TrackerController::send_completed_event() {
     if (!(*itr)->is_in_use())
       continue;
 
-    m_tracker_list->send_state(*itr, Tracker::EVENT_COMPLETED);
+    m_tracker_list->send_state(itr->get(), Tracker::EVENT_COMPLETED);
   }
 
   // Timer...
@@ -412,7 +376,7 @@ tracker_find_preferred(TrackerList::iterator first, TrackerList::iterator last, 
   uint32_t preferred_time_last = ~uint32_t();
 
   for (; first != last; first++) {
-    uint32_t tracker_timeout = tracker_next_timeout_promiscuous(*first);
+    uint32_t tracker_timeout = tracker_next_timeout_promiscuous(first->get());
 
     if (tracker_timeout != 0) {
       *next_timeout = std::min(tracker_timeout, *next_timeout);
@@ -459,7 +423,7 @@ TrackerController::do_timeout() {
         preferred = tracker_find_preferred(preferred, group_end, &next_timeout);
 
       } else {
-        uint32_t tracker_timeout = tracker_next_timeout_promiscuous(*preferred);
+        uint32_t tracker_timeout = tracker_next_timeout_promiscuous(preferred->get());
 
         if (tracker_timeout != 0) {
           next_timeout = std::min(tracker_timeout, next_timeout);
@@ -511,7 +475,7 @@ TrackerController::do_scrape() {
 
     while (itr != group_end) {
       if ((*itr)->can_scrape() && (*itr)->is_usable()) {
-        m_tracker_list->send_scrape(*itr);
+        m_tracker_list->send_scrape(itr->get());
         break;
       }
 

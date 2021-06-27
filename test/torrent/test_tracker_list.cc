@@ -105,7 +105,7 @@ test_tracker_list::test_basic() {
   TRACKER_INSERT(0, tracker_0);
 
   CPPUNIT_ASSERT(tracker_list.size() == 1);
-  CPPUNIT_ASSERT(tracker_0 == tracker_list[0]);
+  CPPUNIT_ASSERT(tracker_list[0].get() == tracker_0);
 
   CPPUNIT_ASSERT(std::distance(tracker_list.begin_group(0), tracker_list.end_group(0)) == 1);
   CPPUNIT_ASSERT(tracker_list.find_usable(tracker_list.begin()) != tracker_list.end());

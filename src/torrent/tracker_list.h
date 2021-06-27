@@ -1,11 +1,12 @@
 #ifndef LIBTORRENT_TRACKER_LIST_H
 #define LIBTORRENT_TRACKER_LIST_H
 
-#include <algorithm>
-#include <functional>
-#include <string>
-#include <vector>
-#include <torrent/common.h>
+#import <algorithm>
+#import <functional>
+#import <memory>
+#import <string>
+#import <vector>
+#import <torrent/common.h>
 
 namespace torrent {
 
@@ -21,16 +22,12 @@ class Tracker;
 // tracker to the beginning of the subgroup and start from the
 // beginning of the whole list.
 
-class LIBTORRENT_EXPORT TrackerList : private std::vector<Tracker*> {
+class LIBTORRENT_EXPORT TrackerList : private std::vector<std::shared_ptr<Tracker>> {
 public:
   friend class DownloadWrapper;
 
-  typedef std::vector<Tracker*> base_type;
-  typedef AddressList           address_list;
-
-  typedef std::function<void (Tracker*)>                     slot_tracker;
-  typedef std::function<void (Tracker*, const std::string&)> slot_string;
-  typedef std::function<uint32_t (Tracker*, AddressList*)>   slot_address_list;
+  typedef std::vector<std::shared_ptr<Tracker>> base_type;
+  typedef AddressList                           address_list;
 
   using base_type::value_type;
 
@@ -49,6 +46,7 @@ public:
   using base_type::back;
 
   using base_type::at;
+  using base_type::clear;
   using base_type::operator[];
 
   TrackerList(DownloadInfo* info);
@@ -67,7 +65,6 @@ public:
 
   void                disown_all_including(int event_bitmap);
 
-  void                clear();
   void                clear_stats();
 
   iterator            insert(unsigned int group, Tracker* tracker);
@@ -88,7 +85,9 @@ public:
   int32_t             numwant() const                         { return m_numwant; }
   void                set_numwant(int32_t n)                  { m_numwant = n; }
 
-  iterator            find(Tracker* tb)                       { return std::find(begin(), end(), tb); }
+  auto find(Tracker* tb) -> iterator;
+
+  // iterator            find(Tracker* tb)                       { return std::find(begin(), end(), tb); }
   iterator            find_url(const std::string& url);
 
   iterator            find_usable(iterator itr);
@@ -114,19 +113,12 @@ public:
   void                receive_tracker_enabled(Tracker* t);
   void                receive_tracker_disabled(Tracker* t);
 
-  slot_address_list&  slot_success()                          { return m_slot_success; }
-  slot_string&        slot_failure()                          { return m_slot_failed; }
-  slot_tracker&       slot_scrape_success()                   { return m_slot_scrape_success; }
-  slot_string&        slot_scrape_failure()                   { return m_slot_scrape_failed; }
-  slot_tracker&       slot_tracker_enabled()                  { return m_slot_tracker_enabled; }
-  slot_tracker&       slot_tracker_disabled()                 { return m_slot_tracker_disabled; }
-
 protected:
   void                set_state(int s)                        { m_state = s; }
 
 private:
-  TrackerList(const TrackerList&) LIBTORRENT_NO_EXPORT;
-  void operator = (const TrackerList&) LIBTORRENT_NO_EXPORT;
+  TrackerList(const TrackerList&) = delete;
+  void operator = (const TrackerList&) = delete;
 
   DownloadInfo*       m_info;
   int                 m_state;
@@ -134,17 +126,26 @@ private:
   uint32_t            m_key;
   int32_t             m_numwant;
 
-  slot_address_list   m_slot_success;
-  slot_string         m_slot_failed;
-  slot_tracker        m_slot_scrape_success;
-  slot_string         m_slot_scrape_failed;
-  slot_tracker        m_slot_tracker_enabled;
-  slot_tracker        m_slot_tracker_disabled;
+public:
+  auto& slot_success()          { return m_slot_success; }
+  auto& slot_failure()          { return m_slot_failed; }
+  auto& slot_scrape_success()   { return m_slot_scrape_success; }
+  auto& slot_scrape_failure()   { return m_slot_scrape_failed; }
+  auto& slot_tracker_enabled()  { return m_slot_tracker_enabled; }
+  auto& slot_tracker_disabled() { return m_slot_tracker_disabled; }
+
+private:
+  std::function<uint32_t (Tracker*, AddressList*)>   m_slot_success;
+  std::function<void (Tracker*, const std::string&)> m_slot_failed;
+  std::function<void (Tracker*)>                     m_slot_scrape_success;
+  std::function<void (Tracker*, const std::string&)> m_slot_scrape_failed;
+  std::function<void (Tracker*)>                     m_slot_tracker_enabled;
+  std::function<void (Tracker*)>                     m_slot_tracker_disabled;
 };
 
 inline void
 TrackerList::send_state_idx(unsigned idx, int new_event) {
-  send_state(at(idx), new_event);
+  send_state(at(idx).get(), new_event);
 }
 
 inline void
@@ -152,7 +153,12 @@ TrackerList::send_state_itr(iterator itr, int new_event) {
   if (itr == end())
     return;
     
-  send_state(*itr, new_event);
+  send_state(itr->get(), new_event);
+}
+
+inline TrackerList::iterator
+TrackerList::find(Tracker* tb) {
+  return std::find_if(begin(), end(), [tb](auto& v){ return v.get() == tb; });
 }
 
 }

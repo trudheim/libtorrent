@@ -34,22 +34,22 @@ TrackerList::TrackerList(DownloadInfo* info) :
 
 bool
 TrackerList::has_active() const {
-  return std::find_if(begin(), end(), std::mem_fun(&Tracker::is_busy)) != end();
+  return std::find_if(begin(), end(), [](auto& v){ return v->is_busy(); }) != end();
 }
 
 bool
 TrackerList::has_active_not_scrape() const {
-  return std::find_if(begin(), end(), std::mem_fun(&Tracker::is_busy_not_scrape)) != end();
+  return std::find_if(begin(), end(), [](auto& v){ return v->is_busy_not_scrape(); }) != end();
 }
 
 bool
 TrackerList::has_active_in_group(uint32_t group) const {
-  return std::find_if(begin_group(group), end_group(group), std::mem_fun(&Tracker::is_busy)) != end_group(group);
+  return std::find_if(begin_group(group), end_group(group), [](auto& v){ return v->is_busy(); }) != end_group(group);
 }
 
 bool
 TrackerList::has_active_not_scrape_in_group(uint32_t group) const {
-  return std::find_if(begin_group(group), end_group(group), std::mem_fun(&Tracker::is_busy_not_scrape)) != end_group(group);
+  return std::find_if(begin_group(group), end_group(group), [](auto& v){ return v->is_busy_not_scrape(); }) != end_group(group);
 }
 
 // Need a custom predicate because the is_usable function is virtual.
@@ -64,7 +64,7 @@ TrackerList::has_usable() const {
 
 unsigned int
 TrackerList::count_active() const {
-  return std::count_if(begin(), end(), std::mem_fun(&Tracker::is_busy));
+  return std::count_if(begin(), end(), [](auto& v){ return v->is_busy(); });
 }
 
 unsigned int
@@ -91,14 +91,8 @@ TrackerList::disown_all_including(int event_bitmap) {
 }
 
 void
-TrackerList::clear() {
-  std::for_each(begin(), end(), rak::call_delete<Tracker>());
-  base_type::clear();
-}
-
-void
 TrackerList::clear_stats() {
-  std::for_each(begin(), end(), std::mem_fun(&Tracker::clear_stats));
+  std::for_each(begin(), end(), [](auto& v){ return v->clear_stats(); });
 }
 
 void
@@ -153,6 +147,7 @@ TrackerList::send_scrape(Tracker* tracker) {
                  tracker->group(), tracker->url().c_str());
 }
 
+// TODO: Make tracker shared_ptr.
 TrackerList::iterator
 TrackerList::insert(unsigned int group, Tracker* tracker) {
   tracker->set_group(group);
@@ -165,7 +160,7 @@ TrackerList::insert(unsigned int group, Tracker* tracker) {
   tracker->slot_key() = std::bind(&TrackerList::key, this);
   tracker->slot_numwant() = std::bind(&TrackerList::numwant, this);
 
-  iterator itr = base_type::insert(end_group(group), tracker);
+  iterator itr = base_type::insert(end_group(group), std::shared_ptr<Tracker>(tracker));
 
   if (m_slot_tracker_enabled)
     m_slot_tracker_enabled(tracker);
@@ -230,7 +225,7 @@ TrackerList::find_usable(const_iterator itr) const {
 
 TrackerList::iterator
 TrackerList::find_next_to_request(iterator itr) {
-  TrackerList::iterator preferred = itr = std::find_if(itr, end(), std::mem_fun(&Tracker::can_request_state));
+  TrackerList::iterator preferred = itr = std::find_if(itr, end(), [](auto& v){ return v->can_request_state(); });
 
   if (preferred == end() || (*preferred)->failed_counter() == 0)
     return preferred;
@@ -256,12 +251,12 @@ TrackerList::find_next_to_request(iterator itr) {
 
 TrackerList::iterator
 TrackerList::begin_group(unsigned int group) {
-  return std::find_if(begin(), end(), rak::less_equal(group, std::mem_fun(&Tracker::group)));
+  return std::find_if(begin(), end(), rak::less_equal(group, [](auto& v){ return v->group(); }));
 }
 
 TrackerList::const_iterator
 TrackerList::begin_group(unsigned int group) const {
-  return std::find_if(begin(), end(), rak::less_equal(group, std::mem_fun(&Tracker::group)));
+  return std::find_if(begin(), end(), rak::less_equal(group, [](auto& v){ return v->group(); }));
 }
 
 TrackerList::size_type
