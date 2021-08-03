@@ -3,26 +3,38 @@
 namespace mocks {
 
 // TODO: Refactor test_tracker_list.
+// TODO: Refacotr http stream to use shared_ptr.
 
 class http_getter : public torrent::Http {
 public:
   static const int flag_active = 0x1;
 
-  http_getter() : m_test_flags(0) {}
-  ~http_getter() override {}
-  
+  http_getter();
+  ~http_getter() override;
+
   void start() override { m_test_flags |= flag_active; }
   void close() override { m_test_flags &= ~flag_active; }
 
   bool trigger_signal_done();
   bool trigger_signal_failed();
 
+  void set_destroyed_status(bool* status) { m_destroyed_status = status; }
+
 private:
-  int m_test_flags;
+  int   m_test_flags;
+  bool* m_destroyed_status;
 };
 
-// TODO: Refactor http factory to use shared_ptr.
 inline http_getter* create_http_getter() { return new http_getter; }
+
+inline http_getter::http_getter() :
+  m_test_flags(0),
+  m_destroyed_status(nullptr) {}
+
+inline http_getter::~http_getter() {
+  if (m_destroyed_status != nullptr)
+    *m_destroyed_status = true;
+}
 
 // TODO: Move.
 // uint32_t controller_receive_success(torrent::Tracker*, torrent::AddressList*) { return 0; }

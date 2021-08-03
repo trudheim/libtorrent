@@ -1,7 +1,6 @@
 #import "config.h"
 
 #import "mocks/http.h"
-#import "torrent/http.h"
 
 namespace mocks {
 

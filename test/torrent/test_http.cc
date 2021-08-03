@@ -2,26 +2,26 @@
 
 #import "test_http.h"
 
+#import <memory>
 #import <sstream>
 
-#import "torrent/http.h"
+#import "mocks/http.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_http, "torrent");
 
 #define HTTP_SETUP()                                                    \
+  int done_counter = 0;                                                 \
+  int failed_counter = 0;                                               \
   bool http_destroyed = false;                                          \
   bool stream_destroyed = false;                                        \
                                                                         \
-  TestHttp* test_http = new TestHttp(&http_destroyed);                  \
-  torrent::Http* http = test_http;                                      \
-  std::stringstream* http_stream = new StringStream(&stream_destroyed); \
+  auto http_getter = new mocks::http_getter();                          \
+  auto http_stream = new StringStream(&stream_destroyed);               \
                                                                         \
-  int done_counter = 0;                                                 \
-  int failed_counter = 0;                                               \
-                                                                        \
-  http->set_stream(http_stream);                                        \
-  http->signal_done().push_back(std::bind(&increment_value, &done_counter)); \
-  http->signal_failed().push_back(std::bind(&increment_value, &failed_counter));
+  http_getter->set_destroyed_status(&http_destroyed);                   \
+  http_getter->set_stream(http_stream);                                 \
+  http_getter->signal_done().push_back(std::bind(&increment_value, &done_counter)); \
+  http_getter->signal_failed().push_back(std::bind(&increment_value, &failed_counter));
 
 class StringStream : public std::stringstream {
 public:
@@ -31,77 +31,33 @@ private:
   bool* m_destroyed;
 };
 
-class TestHttp : public torrent::Http {
-public:
-  static const int flag_active = 0x1;
-
-  // TODO: Remove need for 'destroyed' by using shared_ptr.
-  TestHttp(bool *destroyed = NULL) : m_flags(0), m_destroyed(destroyed) {}
-  virtual ~TestHttp() { if (m_destroyed) *m_destroyed = true; }
-  
-  virtual void start() { m_flags |= flag_active; }
-  virtual void close() { m_flags &= ~flag_active; }
-
-  bool trigger_signal_done();
-  bool trigger_signal_failed();
-
-private:
-  int m_flags;
-  bool* m_destroyed;
-};
-
-bool
-TestHttp::trigger_signal_done() {
-  if (!(m_flags & flag_active))
-    return false;
-
-  m_flags &= ~flag_active;
-  trigger_done();
-  return true;
-}
-
-bool
-TestHttp::trigger_signal_failed() {
-  if (!(m_flags & flag_active))
-    return false;
-
-  m_flags &= ~flag_active;
-  trigger_failed("We Fail.");
-  return true;
-}
-
-TestHttp* create_test_http() { return new TestHttp; }
-
 static void increment_value(int* value) { (*value)++; }
 
 void
 test_http::test_basic() {
-  torrent::Http::slot_factory() = std::bind(&create_test_http);
+  mocks::http_getter::slot_factory() = std::bind(&mocks::create_http_getter);
 
-  torrent::Http* http = torrent::Http::slot_factory()();
-  std::stringstream* http_stream = new std::stringstream;
+  auto http_getter = mocks::http_getter::slot_factory()();
+  auto http_stream = std::make_unique<std::stringstream>();
 
-  http->set_url("http://example.com");
-  CPPUNIT_ASSERT(http->url() == "http://example.com");
+  http_getter->set_url("http://example.com");
+  CPPUNIT_ASSERT(http_getter->url() == "http://example.com");
 
-  CPPUNIT_ASSERT(http->stream() == NULL);
-  http->set_stream(http_stream);
-  CPPUNIT_ASSERT(http->stream() == http_stream);
+  CPPUNIT_ASSERT(http_getter->stream() == NULL);
+  http_getter->set_stream(http_stream.get());
+  CPPUNIT_ASSERT(http_getter->stream() == http_stream.get());
 
-  CPPUNIT_ASSERT(http->timeout() == 0);
-  http->set_timeout(666);
-  CPPUNIT_ASSERT(http->timeout() == 666);
-  
-  delete http;
-  delete http_stream;
+  CPPUNIT_ASSERT(http_getter->timeout() == 0);
+  http_getter->set_timeout(666);
+  CPPUNIT_ASSERT(http_getter->timeout() == 666);
 }
 
 void
 test_http::test_done() {
   HTTP_SETUP();
-  http->start();
+  http_getter->start();
 
-  CPPUNIT_ASSERT(test_http->trigger_signal_done());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_done());
 
   // Check that we didn't delete...
 
@@ -111,9 +67,9 @@ test_http::test_done() {
 void
 test_http::test_failure() {
   HTTP_SETUP();
-  http->start();
+  http_getter->start();
 
-  CPPUNIT_ASSERT(test_http->trigger_signal_failed());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_failed());
 
   // Check that we didn't delete...
 
@@ -123,26 +79,26 @@ test_http::test_failure() {
 void
 test_http::test_delete_on_done() {
   HTTP_SETUP();
-  http->start();
-  http->set_delete_stream();
+  http_getter->start();
+  http_getter->set_delete_stream();
 
   CPPUNIT_ASSERT(!stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(test_http->trigger_signal_done());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_done());
   CPPUNIT_ASSERT(stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(http->stream() == NULL);
+  CPPUNIT_ASSERT(http_getter->stream() == NULL);
 
   stream_destroyed = false;
   http_stream = new StringStream(&stream_destroyed);
-  http->set_stream(http_stream);
+  http_getter->set_stream(http_stream);
 
-  http->start();
-  http->set_delete_self();
+  http_getter->start();
+  http_getter->set_delete_self();
 
   CPPUNIT_ASSERT(!stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(test_http->trigger_signal_done());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_done());
   CPPUNIT_ASSERT(stream_destroyed);
   CPPUNIT_ASSERT(http_destroyed);
 }
@@ -150,27 +106,26 @@ test_http::test_delete_on_done() {
 void
 test_http::test_delete_on_failure() {
   HTTP_SETUP();
-  http->start();
-  http->set_delete_stream();
+  http_getter->start();
+  http_getter->set_delete_stream();
 
   CPPUNIT_ASSERT(!stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(test_http->trigger_signal_failed());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_failed());
   CPPUNIT_ASSERT(stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(http->stream() == NULL);
+  CPPUNIT_ASSERT(http_getter->stream() == NULL);
 
   stream_destroyed = false;
   http_stream = new StringStream(&stream_destroyed);
-  http->set_stream(http_stream);
+  http_getter->set_stream(http_stream);
 
-  http->start();
-  http->set_delete_self();
+  http_getter->start();
+  http_getter->set_delete_self();
 
   CPPUNIT_ASSERT(!stream_destroyed);
   CPPUNIT_ASSERT(!http_destroyed);
-  CPPUNIT_ASSERT(test_http->trigger_signal_failed());
+  CPPUNIT_ASSERT(http_getter->trigger_signal_failed());
   CPPUNIT_ASSERT(stream_destroyed);
   CPPUNIT_ASSERT(http_destroyed);
 }
-
