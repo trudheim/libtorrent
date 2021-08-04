@@ -1,11 +1,11 @@
 #ifndef LIBTORRENT_HTTP_H
 #define LIBTORRENT_HTTP_H
 
-#include <string>
-#include <functional>
-#include <iosfwd>
-#include <list>
-#include <torrent/common.h>
+#import <string>
+#import <functional>
+#import <iosfwd>
+#import <list>
+#import <torrent/common.h>
 
 namespace torrent {
 
@@ -24,6 +24,8 @@ class LIBTORRENT_EXPORT Http {
 
   static const int flag_delete_self   = 0x1;
   static const int flag_delete_stream = 0x2;
+  static const int flag_only_ipv4     = 0x8;
+  static const int flag_only_ipv6     = 0x10;
 
   Http() : m_flags(0), m_stream(NULL), m_timeout(0) {}
   virtual ~Http();
@@ -56,7 +58,7 @@ class LIBTORRENT_EXPORT Http {
 
   // Guaranteed to return a valid object or throw a internal_error. The
   // caller takes ownership of the returned object.
-  static slot_http&  slot_factory()                       { return m_factory; }
+  static slot_http&  slot_factory();
 
 protected:
   void trigger_done();
@@ -77,17 +79,19 @@ private:
   static slot_http m_factory;
 };
 
-inline auto  Http::flags() const -> int { return m_flags; }
-inline void  Http::set_delete_self() { m_flags |= flag_delete_self; }
-inline void  Http::set_delete_stream() { m_flags |= flag_delete_stream; }
-inline auto  Http::url() const -> const std::string& { return m_url; }
-inline void  Http::set_url(const std::string& url) { m_url = url; }
-inline auto  Http::stream() -> std::iostream* { return m_stream; }
-inline void  Http::set_stream(std::iostream* str) { m_stream = str; }
-inline auto  Http::timeout() const -> uint32_t { return m_timeout; }
-inline void  Http::set_timeout(uint32_t seconds) { m_timeout = seconds; }
-inline auto  Http::signal_done() -> signal_void& { return m_signal_done; }
-inline auto  Http::signal_failed() -> signal_string& { return m_signal_failed; }
+inline auto Http::slot_factory() -> Http::slot_http& { return m_factory; }
+
+inline auto Http::flags() const -> int { return m_flags; }
+inline void Http::set_delete_self() { m_flags |= flag_delete_self; }
+inline void Http::set_delete_stream() { m_flags |= flag_delete_stream; }
+inline auto Http::url() const -> const std::string& { return m_url; }
+inline void Http::set_url(const std::string& url) { m_url = url; }
+inline auto Http::stream() -> std::iostream* { return m_stream; }
+inline void Http::set_stream(std::iostream* str) { m_stream = str; }
+inline auto Http::timeout() const -> uint32_t { return m_timeout; }
+inline void Http::set_timeout(uint32_t seconds) { m_timeout = seconds; }
+inline auto Http::signal_done() -> signal_void& { return m_signal_done; }
+inline auto Http::signal_failed() -> signal_string& { return m_signal_failed; }
 
 }
 

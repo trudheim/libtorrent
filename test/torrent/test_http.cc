@@ -5,7 +5,7 @@
 #import <memory>
 #import <sstream>
 
-#import "mocks/http.h"
+#import "mock/http.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_http, "torrent");
 
@@ -15,7 +15,7 @@ CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_http, "torrent");
   bool http_destroyed = false;                                          \
   bool stream_destroyed = false;                                        \
                                                                         \
-  auto http_getter = new mocks::http_getter();                          \
+  auto http_getter = new mock::http_getter();                          \
   auto http_stream = new StringStream(&stream_destroyed);               \
                                                                         \
   http_getter->set_destroyed_status(&http_destroyed);                   \
@@ -35,9 +35,9 @@ static void increment_value(int* value) { (*value)++; }
 
 void
 test_http::test_basic() {
-  mocks::http_getter::slot_factory() = std::bind(&mocks::create_http_getter);
+  mock::http_getter::slot_factory() = std::bind(&mock::create_http_getter);
 
-  auto http_getter = mocks::http_getter::slot_factory()();
+  auto http_getter = mock::http_getter::slot_factory()();
   auto http_stream = std::make_unique<std::stringstream>();
 
   http_getter->set_url("http://example.com");
@@ -53,13 +53,21 @@ test_http::test_basic() {
 }
 
 void
+test_http::test_flags() {
+  auto http_getter = std::make_unique<mock::http_getter>();
+
+  CPPUNIT_ASSERT(http_getter->flags() == 0);
+
+  // No need to add tests for delete_self/stream as they're going to
+  // be obsolete.
+}
+
+void
 test_http::test_done() {
   HTTP_SETUP();
   http_getter->start();
 
   CPPUNIT_ASSERT(http_getter->trigger_signal_done());
-
-  // Check that we didn't delete...
 
   CPPUNIT_ASSERT(done_counter == 1 && failed_counter == 0);
 }
@@ -70,8 +78,6 @@ test_http::test_failure() {
   http_getter->start();
 
   CPPUNIT_ASSERT(http_getter->trigger_signal_failed());
-
-  // Check that we didn't delete...
 
   CPPUNIT_ASSERT(done_counter == 0 && failed_counter == 1);
 }

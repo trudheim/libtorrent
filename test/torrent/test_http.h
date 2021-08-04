@@ -4,6 +4,8 @@ class test_http : public test_fixture {
   CPPUNIT_TEST_SUITE(test_http);
 
   CPPUNIT_TEST(test_basic);
+  CPPUNIT_TEST(test_flags);
+
   CPPUNIT_TEST(test_done);
   CPPUNIT_TEST(test_failure);
 
@@ -14,10 +16,11 @@ class test_http : public test_fixture {
 
 public:
   void test_basic();
+  void test_flags();
+
   void test_done();
   void test_failure();
 
   void test_delete_on_done();
   void test_delete_on_failure();
 };
-

@@ -1,10 +1,10 @@
 #import "torrent/http.h"
 
-namespace mocks {
+namespace mock {
 
 class http_getter : public torrent::Http {
 public:
-  static const int flag_active = 0x1;
+  static const int test_flag_active = 0x1;
 
   http_getter();
   ~http_getter() override;
@@ -18,7 +18,7 @@ public:
   void set_destroyed_status(bool* status);
 
 private:
-  int   m_flags;
+  int   m_test_flags;
   bool* m_destroyed_status;
 };
 

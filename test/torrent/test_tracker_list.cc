@@ -5,7 +5,7 @@
 #import "net/address_list.h"
 
 #import "test_tracker_list.h"
-#import "mocks/http.h"
+#import "mock/http.h"
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_tracker_list, "torrent::tracker_list");
 
@@ -114,7 +114,7 @@ test_tracker_list::test_enable() {
 
   tracker_0->enable(); tracker_1->enable();
   CPPUNIT_ASSERT(enabled_counter == 2 && disabled_counter == 0);
-  
+
   tracker_0->disable(); tracker_1->enable();
   CPPUNIT_ASSERT(enabled_counter == 2 && disabled_counter == 1);
 
@@ -213,7 +213,7 @@ test_tracker_list::test_find_url() {
 void
 test_tracker_list::test_can_scrape() {
   TRACKER_SETUP();
-  torrent::Http::slot_factory() = std::bind(&mocks::create_http_getter);
+  torrent::Http::slot_factory() = std::bind(&mock::create_http_getter);
 
   tracker_list.insert_url(0, "http://example.com/announce");
   CPPUNIT_ASSERT((tracker_list.back()->flags() & torrent::Tracker::flag_can_scrape));
@@ -271,7 +271,7 @@ test_tracker_list::test_single_success() {
   CPPUNIT_ASSERT(!tracker_0->is_open());
   CPPUNIT_ASSERT(tracker_0->requesting_state() == -1);
   CPPUNIT_ASSERT(tracker_0->latest_event() == torrent::Tracker::EVENT_STARTED);
-  
+
   CPPUNIT_ASSERT(success_counter == 1 && failure_counter == 0);
   CPPUNIT_ASSERT(tracker_0->success_counter() == 1);
   CPPUNIT_ASSERT(tracker_0->failed_counter() == 0);
@@ -381,7 +381,7 @@ void
 test_tracker_list::test_scrape_success() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0);
-  
+
   tracker_0->set_can_scrape();
   tracker_list.send_scrape(tracker_0);
 
@@ -398,7 +398,7 @@ test_tracker_list::test_scrape_success() {
   CPPUNIT_ASSERT(!tracker_0->is_open());
   CPPUNIT_ASSERT(tracker_0->requesting_state() == -1);
   CPPUNIT_ASSERT(tracker_0->latest_event() == torrent::Tracker::EVENT_SCRAPE);
-  
+
   CPPUNIT_ASSERT(success_counter == 0 && failure_counter == 0);
   CPPUNIT_ASSERT(scrape_success_counter == 1 && scrape_failure_counter == 0);
   CPPUNIT_ASSERT(tracker_0->success_counter() == 0);
@@ -410,7 +410,7 @@ void
 test_tracker_list::test_scrape_failure() {
   TRACKER_SETUP();
   TRACKER_INSERT(0, tracker_0);
-  
+
   tracker_0->set_can_scrape();
   tracker_list.send_scrape(tracker_0);
 
@@ -420,7 +420,7 @@ test_tracker_list::test_scrape_failure() {
   CPPUNIT_ASSERT(!tracker_0->is_open());
   CPPUNIT_ASSERT(tracker_0->requesting_state() == -1);
   CPPUNIT_ASSERT(tracker_0->latest_event() == torrent::Tracker::EVENT_SCRAPE);
-  
+
   CPPUNIT_ASSERT(success_counter == 0 && failure_counter == 0);
   CPPUNIT_ASSERT(scrape_success_counter == 0 && scrape_failure_counter == 1);
   CPPUNIT_ASSERT(tracker_0->success_counter() == 0);

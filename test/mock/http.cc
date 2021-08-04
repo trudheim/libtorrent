@@ -1,11 +1,11 @@
 #import "config.h"
 
-#import "mocks/http.h"
+#import "mock/http.h"
 
-namespace mocks {
+namespace mock {
 
 http_getter::http_getter() :
-  m_flags(0),
+  m_test_flags(0),
   m_destroyed_status(nullptr) {}
 
 http_getter::~http_getter() {
@@ -15,20 +15,20 @@ http_getter::~http_getter() {
 
 void
 http_getter::start() {
-  m_flags |= flag_active;
+  m_test_flags |= test_flag_active;
 }
 
 void
 http_getter::close() {
-  m_flags &= ~flag_active;
+  m_test_flags &= ~test_flag_active;
 }
 
 bool
 http_getter::trigger_signal_done() {
-  if (!(m_flags & flag_active))
+  if (!(m_test_flags & test_flag_active))
     return false;
 
-  m_flags &= ~flag_active;
+  m_test_flags &= ~test_flag_active;
   trigger_done();
 
   return true;
@@ -36,11 +36,11 @@ http_getter::trigger_signal_done() {
 
 bool
 http_getter::trigger_signal_failed() {
-  if (!(m_flags & flag_active))
+  if (!(m_test_flags & test_flag_active))
     return false;
 
-  m_flags &= ~flag_active;
-  trigger_failed("We Fail.");
+  m_test_flags &= ~test_flag_active;
+  trigger_failed("mock triggered failed");
 
   return true;
 }
