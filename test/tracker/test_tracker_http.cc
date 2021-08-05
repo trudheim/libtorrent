@@ -2,7 +2,7 @@
 
 #import "test_tracker_http.h"
 
-#import "mocks/http.h"
+#import "mock/http.h"
 #import "torrent/tracker_list.h"
 #import "tracker/tracker_http.h"
 
