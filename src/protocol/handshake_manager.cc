@@ -95,7 +95,7 @@ HandshakeManager::add_incoming(SocketFd fd, const rak::socket_address& sa) {
 
   base_type::push_back(h);
 }
-  
+
 void
 HandshakeManager::add_outgoing(const rak::socket_address& sa, DownloadMain* download) {
   if (!manager->connection_manager()->can_connect() ||
@@ -175,7 +175,7 @@ HandshakeManager::receive_succeeded(Handshake* handshake) {
                                                  handshake->bitfield(),
                                                  handshake->encryption()->info(),
                                                  handshake->extensions())) != NULL) {
-    
+
     manager->client_list()->retrieve_id(&handshake->peer_info()->mutable_client_info(), handshake->peer_info()->id());
     LT_LOG_SA_C(handshake->peer_info()->socket_address(), "Handshake success.", 0);
 
@@ -254,7 +254,7 @@ HandshakeManager::setup_socket(SocketFd fd) {
 
   if (m->send_buffer_size() != 0 && !fd.set_send_buffer_size(m->send_buffer_size()))
     return false;
-    
+
   if (m->receive_buffer_size() != 0 && !fd.set_receive_buffer_size(m->receive_buffer_size()))
     return false;
 

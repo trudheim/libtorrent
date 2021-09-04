@@ -1,45 +1,10 @@
-// libTorrent - BitTorrent library
-// Copyright (C) 2005-2011, Jari Sundell
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-// 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-// 
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-// In addition, as a special exception, the copyright holders give
-// permission to link the code of portions of this program with the
-// OpenSSL library under certain conditions as described in each
-// individual source file, and distribute linked combinations
-// including the two.
-//
-// You must obey the GNU General Public License in all respects for
-// all of the code used other than OpenSSL.  If you modify file(s)
-// with this exception, you may extend this exception to your version
-// of the file(s), but you are not obligated to do so.  If you do not
-// wish to do so, delete this exception statement from your version.
-// If you delete this exception statement from all source files in the
-// program, then also delete it here.
-//
-// Contact:  Jari Sundell <jaris@ifi.uio.no>
-//
-//           Skomakerveien 33
-//           3185 Skoppum, NORWAY
-
 #include "config.h"
 
 #include <sys/types.h>
 
 #include <rak/address_info.h>
 #include <rak/socket_address.h>
+#include <net/socket_address.h>
 
 #include "net/listen.h"
 
@@ -70,10 +35,10 @@ resolve_host(const char* host, int family, int socktype, ConnectionManager::slot
   rak::socket_address sa;
   sa.copy(*ai->address(), ai->length());
   rak::address_info::free_address_info(ai);
-  
+
   if (manager->main_thread_main()->is_current())
     thread_base::acquire_global_lock();
-  
+
   slot(sa.c_sockaddr(), 0);
   return NULL;
 }
@@ -174,6 +139,12 @@ ConnectionManager::set_proxy_address(const sockaddr* sa) {
 
 uint32_t
 ConnectionManager::filter(const sockaddr* sa) {
+  if (!sa_is_any(sa)) {
+    if ((m_block_ipv4 && sa_is_inet(sa)) ||
+        (m_block_ipv6 && sa_is_inet6(sa)))
+      return 0;
+  }
+
   if (!m_slot_filter)
     return 1;
   else
