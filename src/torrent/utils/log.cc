@@ -27,7 +27,7 @@ struct log_cache_entry {
   bool equal_outputs(const outputs_type& out) const { return out == outputs; }
 
   void allocate(unsigned int count) { cache_first = new log_slot[count]; cache_last = cache_first + count; }
-  void clear()                      { delete [] cache_first; cache_first = NULL; cache_last = NULL; }
+  void clear()                      { outputs = 0; delete [] cache_first; cache_first = NULL; cache_last = NULL; }
 
   outputs_type outputs;
   log_slot*    cache_first;
@@ -105,10 +105,10 @@ log_rebuild_cache() {
       continue;
     }
 
-    log_cache_list::iterator cache_itr = 
-      std::find_if(log_cache.begin(), log_cache.end(),
-                   std::bind(&log_cache_entry::equal_outputs, std::placeholders::_1, use_outputs));
-    
+    auto cache_itr = std::find_if(log_cache.begin(), log_cache.end(), [use_outputs](const auto& entry) {
+        return entry.equal_outputs(use_outputs);
+      });
+
     if (cache_itr == log_cache.end()) {
       cache_itr = log_cache.insert(log_cache.end(), log_cache_entry());
       cache_itr->outputs = use_outputs;
@@ -235,24 +235,19 @@ log_cleanup() {
 
 log_output_list::iterator
 log_find_output_name(const char* name) {
-  log_output_list::iterator itr = log_outputs.begin();
-  log_output_list::iterator last = log_outputs.end();
+  auto lock = std::scoped_lock(log_mutex);
 
-  while (itr != last && itr->first != name)
-    itr++;
-
-  return itr;
+  return std::find_if(log_outputs.begin(), log_outputs.end(), [name](auto& pair) { return pair.first == name; });
 }
 
 void
 log_open_output(const char* name, log_slot slot) {
   auto lock = std::scoped_lock(log_mutex);
 
-  if (log_outputs.size() >= log_group::max_size_outputs()) {
+  if (log_outputs.size() >= log_group::max_size_outputs())
     throw input_error("Cannot open more than 64 log output handlers.");
-  }
 
-  log_output_list::iterator itr = log_find_output_name(name);
+  auto itr = std::find_if(log_outputs.begin(), log_outputs.end(), [name](auto& pair) { return pair.first == name; });
 
   if (itr == log_outputs.end()) {
     log_outputs.emplace_back(name, slot);
@@ -269,7 +264,7 @@ void
 log_close_output(const char* name) {
   auto lock = std::scoped_lock(log_mutex);
 
-  log_output_list::iterator itr = log_find_output_name(name);
+  auto itr = std::find_if(log_outputs.begin(), log_outputs.end(), [name](auto& pair) { return pair.first == name; });
 
   if (itr != log_outputs.end())
     log_outputs.erase(itr);
@@ -279,12 +274,12 @@ void
 log_add_group_output(int group, const char* name) {
   auto lock = std::scoped_lock(log_mutex);
 
-  log_output_list::iterator itr = log_find_output_name(name);
-  size_t index = std::distance(log_outputs.begin(), itr);
+  auto itr = std::find_if(log_outputs.begin(), log_outputs.end(), [name](auto& pair) { return pair.first == name; });
 
-  if (itr == log_outputs.end()) {
-    throw input_error("Log name not found.");
-  }
+  if (itr == log_outputs.end())
+    throw input_error("Log name not found: '" + std::string(name) + "'.");
+
+  size_t index = std::distance(log_outputs.begin(), itr);
 
   if (index >= log_group::max_size_outputs()) {
     throw input_error("Cannot add more log group outputs.");
@@ -295,7 +290,7 @@ log_add_group_output(int group, const char* name) {
 }
 
 void
-log_remove_group_output(int group, const char* name) {
+log_remove_group_output([[maybe_unused]] int group, [[maybe_unused]] const char* name) {
 }
 
 // The log_children list is <child, group> since we build the output
@@ -314,7 +309,7 @@ log_add_child(int group, int child) {
 }
 
 void
-log_remove_child(int group, int child) {
+log_remove_child([[maybe_unused]] int group, [[maybe_unused]] int child) {
   // Remove from all groups, then modify all outputs.
 }
 
@@ -346,7 +341,7 @@ log_gz_file_write(std::shared_ptr<log_gz_output>& outfile, const char* data, siz
     int buffer_length = snprintf(buffer, 64, GROUPFMT,
                                  cachedTime.seconds(),
                                  log_level_char[group % 6]);
-    
+
     if (buffer_length > 0)
       gzwrite(outfile->gz_file, buffer, buffer_length);
 
@@ -355,7 +350,7 @@ log_gz_file_write(std::shared_ptr<log_gz_output>& outfile, const char* data, siz
 
   } else if (group == -1) {
     gzwrite(outfile->gz_file, "---DUMP---\n", sizeof("---DUMP---\n") - 1);
-    
+
     if (length != 0)
       gzwrite(outfile->gz_file, data, length);
 
@@ -368,6 +363,7 @@ log_open_file_output(const char* name, const char* filename, bool append) {
   std::ios_base::openmode mode = std::ofstream::out;
   if (append)
     mode |= std::ofstream::app;
+
   std::shared_ptr<std::ofstream> outfile(new std::ofstream(filename, mode));
 
   if (!outfile->good())

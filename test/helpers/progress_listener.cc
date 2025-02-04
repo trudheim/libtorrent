@@ -7,6 +7,7 @@
 #include <iterator>
 #include <numeric>
 #include <stdexcept>
+
 #include "torrent/utils/log.h"
 #include "torrent/utils/log_buffer.h"
 
@@ -26,8 +27,8 @@ progress_listener::startTest(CppUnit::Test *test) {
 
   torrent::log_cleanup();
 
-  m_last_test_failed = false;
   m_current_log_buffer = torrent::log_open_log_buffer("test_output");
+  m_last_test_failed = false;
 }
 
 void
@@ -43,7 +44,7 @@ progress_listener::addFailure(const CppUnit::TestFailure &failure) {
 }
 
 void
-progress_listener::endTest(CppUnit::Test *test) {
+progress_listener::endTest([[maybe_unused]] CppUnit::Test *test) {
   std::cout << (m_last_test_failed ? "" : " : OK") << std::endl;
 
   m_current_log_buffer.reset();
@@ -59,6 +60,6 @@ progress_listener::startSuite(CppUnit::Test *suite) {
 }
 
 void
-progress_listener::endSuite(CppUnit::Test *suite) {
+progress_listener::endSuite([[maybe_unused]] CppUnit::Test *suite) {
   m_test_path.pop_back();
 }

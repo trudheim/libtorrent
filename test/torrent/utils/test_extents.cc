@@ -5,6 +5,8 @@
 #include <torrent/utils/extents.h>
 #include <torrent/utils/log.h>
 
+#include <iostream>
+
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(test_extents, "torrent/utils");
 
 #define TEST_EXTENT_BEGIN(name)                                 \
