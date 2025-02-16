@@ -54,7 +54,9 @@ TrackerControllerWrapper::enable_dont_reset_stats() {
 
 void
 TrackerControllerWrapper::disable() {
-  m_ptr->disable();
+  if( m_ptr != NULL ) {
+    m_ptr->disable();
+  }
 }
 
 void
